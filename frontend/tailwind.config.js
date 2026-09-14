@@ -6,15 +6,18 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        rcc: {
-          bg: "#0A0A0C",
-          surface: "#121216",
-          card: "#181820",
-          cream: "#EDE8DB",
-          gold: "#D4AF37",
-          muted: "#8E8E9F",
+      fontFamily: {
+        sans: ["Poppins", "sans-serif"],
+        display: ["Archivo Black", "sans-serif"],
+      },
+      keyframes: {
+        "slide-in": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
+      },
+      animation: {
+        "slide-in": "slide-in 550ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

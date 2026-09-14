@@ -4,36 +4,6 @@
 
 @layer base {
   body {
-    @apply bg-[#0A0A0C] text-white antialiased selection:bg-[#EDE8DB] selection:text-[#0A0A0C];
+    @apply bg-[#0A0B0C] font-sans antialiased;
   }
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0A0A0C;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #262630;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3A3A4A;
-}
-
-/* Hide scrollbar for chrome, safari and opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
 }
