@@ -38,6 +38,30 @@ type Options = {
   signal?: AbortSignal;
 };
 
+/**
+ * Routes dont un 401 est une réponse normale et non la perte d'une session :
+ * `/auth/me` est la sonde qu'on lance à chaque chargement, et les formulaires
+ * d'identification répondent 401 quand les identifiants sont faux.
+ */
+const EXPECTED_401 = ['/auth/me', '/auth/login', '/auth/register', '/auth/logout'];
+
+let onSessionLost: (() => void) | null = null;
+
+/**
+ * Prévenu quand le serveur déclare une session invalide alors que l'interface
+ * la croyait ouverte.
+ *
+ * Le cookie est en HttpOnly : le JavaScript ne peut pas savoir qu'il a expiré,
+ * qu'il a été révoqué depuis un autre appareil, ou que le serveur a été
+ * redéployé. Le seul signal disponible est un 401 sur un appel qui n'aurait pas
+ * dû en produire — sans quoi l'application continue d'afficher un client
+ * connecté et laisse les erreurs surgir au pire endroit, comme au moment de
+ * confirmer une commande.
+ */
+export function setSessionLostHandler(handler: (() => void) | null): void {
+  onSessionLost = handler;
+}
+
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const { method = 'GET', body, signal } = options;
 
@@ -67,6 +91,10 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401 && !EXPECTED_401.includes(path)) {
+      onSessionLost?.();
+    }
+
     if (payload?.error) {
       throw new ApiFailure(response.status, payload.error);
     }

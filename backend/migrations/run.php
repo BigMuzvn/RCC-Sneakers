@@ -32,6 +32,20 @@ $pdo->exec(sprintf('USE `%s`', $db['name']));
 
 echo "Base : {$db['name']}\n";
 
+if ($fresh && !$useTest && !in_array('--force', $argv, true)) {
+    // --fresh supprime toutes les tables, comptes et commandes compris. Sur la
+    // base de travail, cela efface le compte de quelqu'un qui est peut-être en
+    // train de s'en servir dans un onglet ouvert — c'est arrivé. Sur la base de
+    // test, c'est le comportement attendu et le garde ne s'applique pas.
+    fwrite(STDERR, sprintf(
+        "Refus : --fresh supprimerait toutes les tables de « %s », données comprises.\n" .
+        "  • base de test   : php migrations/run.php --test --fresh\n" .
+        "  • vraiment ici   : php migrations/run.php --fresh --force\n",
+        $db['name']
+    ));
+    exit(1);
+}
+
 if ($fresh) {
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
     foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {

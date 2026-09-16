@@ -131,6 +131,10 @@ Le cookie porte `sélecteur.validateur` ; la base ne garde que le sélecteur et 
 
 **Un envoi raté ne fait jamais échouer une inscription.** Le compte est créé, l'échec journalisé. L'inverse ferme la boutique à chaque panne de Brevo.
 
+**Le serveur fait autorité sur la session, et l'interface s'y range.** Le cookie est en HttpOnly : le JavaScript ne peut pas savoir qu'il a expiré, qu'il a été révoqué depuis un autre appareil, ou que le serveur a été redéployé. Le seul signal est un 401 sur un appel qui n'aurait pas dû en produire — `src/api/client.ts` le remonte alors au contexte, qui vide l'état et laisse les pages protégées renvoyer vers la connexion. Sans cela, l'application affiche un client connecté et l'erreur surgit au pire endroit : au moment de confirmer une commande.
+
+**`--fresh` est refusé sur la base de travail** sans `--force`. Il supprime toutes les tables, comptes et commandes compris — y compris ceux de quelqu'un dont l'onglet est resté ouvert. Sur la base de test, c'est le comportement attendu et le garde ne s'applique pas.
+
 ## Commandes
 
 **Le serveur ne fait confiance à rien de ce que le navigateur envoie sur l'argent.** Le panier transmet quels articles, quelle taille, quelle quantité. Les prix, les frais de livraison et la disponibilité sont relus en base. Sans cela, n'importe qui commande à 0 F en modifiant une requête — et le stock affiché dans le navigateur ne prouve rien.

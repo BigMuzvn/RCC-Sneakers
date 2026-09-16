@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api } from '../api/client';
+import { api, setSessionLostHandler } from '../api/client';
 import { AuthContext, type AuthValue, type Customer, type RegisterInput } from './auth-context';
 
 type Envelope = { customer: Customer };
@@ -28,6 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  /**
+   * Le serveur fait autorité sur la session. S'il refuse un appel que seule une
+   * session ouverte autorise, l'interface se range à son avis immédiatement :
+   * les pages protégées renvoient alors vers la connexion d'elles-mêmes, au
+   * lieu d'afficher « vous devez être connecté » à quelqu'un qui croyait l'être.
+   */
+  useEffect(() => {
+    setSessionLostHandler(() => setCustomer(null));
+
+    return () => setSessionLostHandler(null);
+  }, []);
 
   const register = useCallback(async (input: RegisterInput) => {
     const data = await api<Envelope>('/auth/register', { method: 'POST', body: input });
