@@ -13,10 +13,50 @@ use RuntimeException;
  */
 abstract class DatabaseTestCase extends TestCase
 {
+    /**
+     * Tables épargnées par le nettoyage : le catalogue est une donnée de
+     * référence, chargée une fois par `php migrations/seed.php --test`. La vider
+     * à chaque test obligerait à la recharger 130 fois pour rien.
+     *
+     * Les tests qui touchent au stock le fixent explicitement (`setStock`) au
+     * lieu de dépendre des valeurs du semoir : une assertion qui repose sur
+     * « il en reste 4 » casse le jour où le catalogue change.
+     */
+    private const PRESERVED = [
+        'migrations',
+        'products', 'product_variants',
+        'jerseys', 'jersey_variants',
+        'delivery_zones',
+    ];
+
     protected function setUp(): void
     {
         Config::load();
         $this->truncateAll();
+    }
+
+    /** Fixe le stock d'une taille précise, pour rendre le test déterministe. */
+    protected function setStock(string $type, int $id, string $size, int $stock): void
+    {
+        [$table, $key] = $type === 'jersey'
+            ? ['jersey_variants', 'jersey_id']
+            : ['product_variants', 'product_id'];
+
+        Database::run(
+            "UPDATE {$table} SET stock = ? WHERE {$key} = ? AND size = ?",
+            [$stock, $id, $size]
+        );
+    }
+
+    protected function stockOf(string $type, int $id, string $size): int
+    {
+        [$table, $key] = $type === 'jersey'
+            ? ['jersey_variants', 'jersey_id']
+            : ['product_variants', 'product_id'];
+
+        $row = Database::first("SELECT stock FROM {$table} WHERE {$key} = ? AND size = ?", [$id, $size]);
+
+        return (int) ($row['stock'] ?? -1);
     }
 
     private function truncateAll(): void
@@ -43,7 +83,7 @@ abstract class DatabaseTestCase extends TestCase
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
 
         foreach ($pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) as $table) {
-            if ($table !== 'migrations') {
+            if (!in_array($table, self::PRESERVED, true)) {
                 // DELETE et non TRUNCATE : sur InnoDB, TRUNCATE supprime et
                 // recrée le fichier de tablespace. Mesuré sur ces quatre tables
                 // vides — 4 260 ms contre 10 ms, soit 426 fois plus lent. Une

@@ -6,11 +6,12 @@ import Footer from './Footer';
 import SideShoe from './SideShoe';
 import ProductCard from './ProductCard';
 import JerseyCard from './JerseyCard';
-import { ApiFailure } from '../api/client';
+import { ApiFailure, api } from '../api/client';
 import { useAuth } from '../context/auth-context';
 import { useFavorites } from '../context/favorites-context';
 import { PRODUCTS } from '../data/products';
 import { JERSEYS } from '../data/jerseys';
+import { formatXof } from '../utils/format';
 import paireCompte from '../assets/paire-compte.png';
 
 /** Tons relevés sur le visuel : périwinkle 30 %, bordeaux-rose 23 %. */
@@ -190,14 +191,78 @@ function VerificationBanner() {
 
 /* ----------------------------------------------------------------- commandes */
 
+type OrderItem = {
+  item_type: string;
+  item_id: number;
+  title: string;
+  subtitle: string;
+  size: string;
+  unit_price_xof: number;
+  qty: number;
+  line_total_xof: number;
+};
+
+type Order = {
+  reference: string;
+  status: string;
+  payment_method: string;
+  delivery_label: string;
+  delivery_address: string;
+  subtotal_xof: number;
+  delivery_fee_xof: number;
+  total_xof: number;
+  created_at: string;
+  items: OrderItem[];
+};
+
+const STATUSES: Record<string, { label: string; className: string }> = {
+  pending: { label: 'En préparation', className: 'border-[#E2B04A]/40 bg-[#E2B04A]/10 text-[#E2B04A]' },
+  confirmed: { label: 'Confirmée', className: 'border-[#6BA8E2]/40 bg-[#6BA8E2]/10 text-[#9CC6EE]' },
+  shipped: { label: 'Expédiée', className: 'border-[#6BA8E2]/40 bg-[#6BA8E2]/10 text-[#9CC6EE]' },
+  delivered: { label: 'Livrée', className: 'border-[#4A9E6B]/40 bg-[#4A9E6B]/10 text-[#7FCB9B]' },
+  cancelled: { label: 'Annulée', className: 'border-[#E2564A]/40 bg-[#E2564A]/10 text-[#F2A79E]' },
+};
+
+/** Les dates arrivent en UTC ; Cotonou est à UTC+1. */
+const formatDate = (utc: string) =>
+  new Date(utc.replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
 function OrdersTab() {
-  return (
-    <div className="flex flex-col gap-5">
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    api<{ orders: Order[] }>('/orders')
+      .then((data) => {
+        if (!cancelled) setOrders(data.orders);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setOrders([]);
+        setError(err instanceof ApiFailure ? err.message : 'Impossible de charger vos commandes.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (orders === null) {
+    return <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Chargement…</p>;
+  }
+
+  if (orders.length === 0) {
+    return (
       <div className={cardClass}>
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#EDEFF2]">Aucune commande</p>
         <p className="mt-2 max-w-lg text-[11px] leading-[1.7] text-white/55">
-          Vos commandes apparaîtront ici dès que vous en aurez passé une, avec leur statut de livraison et leur
-          facture.
+          {error || 'Vos commandes apparaîtront ici dès que vous en aurez passé une, avec leur statut de livraison et leur facture.'}
         </p>
         <Link
           to="/boutique"
@@ -206,36 +271,85 @@ function OrdersTab() {
           Voir la boutique
         </Link>
       </div>
+    );
+  }
 
-      {/* Aperçu de maquette, signalé comme tel. Le tunnel de commande
-          n'enregistre encore rien : afficher une fausse commande sans le dire
-          reviendrait à mentir sur l'état du site. */}
-      <div className="border border-dashed border-white/15 p-5 sm:p-7">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">
-          Aperçu — à quoi ressemblera une commande
-        </p>
+  return (
+    <div className="flex flex-col gap-4">
+      {orders.map((order) => {
+        const statut = STATUSES[order.status] ?? STATUSES.pending;
+        const articles = order.items.reduce((n, item) => n + item.qty, 0);
 
-        <div className="mt-5 flex flex-col gap-4 border border-white/10 bg-white/[0.02] p-4 opacity-55 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-[13px] uppercase tracking-[0.06em] text-[#EDEFF2]">RCC-482013</p>
-            <p className="mt-1 text-[11px] text-white/50">3 articles — 186 000 F CFA</p>
-          </div>
+        return (
+          <article key={order.reference} className={cardClass}>
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-display text-[15px] uppercase tracking-[0.06em] text-[#EDEFF2]">
+                  {order.reference}
+                </p>
+                <p className="mt-1 text-[11px] text-white/45">
+                  {formatDate(order.created_at)} — {articles} article{articles > 1 ? 's' : ''}
+                </p>
+              </div>
 
-          <span className="w-fit border border-[#4A9E6B]/40 bg-[#4A9E6B]/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#7FCB9B]">
-            Livrée
-          </span>
+              <span
+                className={`shrink-0 border px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] ${statut.className}`}
+              >
+                {statut.label}
+              </span>
+            </header>
 
-          <button
-            type="button"
-            disabled
-            title="La facture sera disponible quand les commandes seront enregistrées"
-            className="flex w-fit cursor-not-allowed items-center gap-2 border border-white/20 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/60"
-          >
-            <Download className="h-3.5 w-3.5" strokeWidth={2.2} />
-            Télécharger la facture
-          </button>
-        </div>
-      </div>
+            <ul className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-4">
+              {order.items.map((item, index) => (
+                <li key={`${item.item_type}-${item.item_id}-${item.size}-${index}`} className="flex gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-bold uppercase tracking-[0.06em] text-[#EDEFF2]">
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 truncate text-[10px] text-white/45">
+                      {item.subtitle} — taille {item.size} × {item.qty}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-display text-[13px] text-[#EDEFF2]">
+                    {formatXof(item.line_total_xof)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <dl className="mt-4 flex flex-col gap-1.5 border-t border-white/10 pt-4 text-[11px]">
+              <div className="flex justify-between text-white/45">
+                <dt>Sous-total</dt>
+                <dd>{formatXof(order.subtotal_xof)}</dd>
+              </div>
+              <div className="flex justify-between text-white/45">
+                <dt>Livraison — {order.delivery_label}</dt>
+                <dd>{formatXof(order.delivery_fee_xof)}</dd>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between border-t border-white/10 pt-2.5">
+                <dt className="font-bold uppercase tracking-[0.14em] text-[#EDEFF2]">Total</dt>
+                <dd className="font-display text-[17px] text-[#EDEFF2]">{formatXof(order.total_xof)}</dd>
+              </div>
+            </dl>
+
+            <p className="mt-4 text-[10px] leading-[1.6] text-white/35">
+              Livraison à : {order.delivery_address}
+            </p>
+
+            {/* Le format de la facture n'est pas encore arrêté. Bouton inerte
+                et dit comme tel, plutôt qu'un téléchargement qui échoue. */}
+            <button
+              type="button"
+              disabled
+              title="La facture sera disponible prochainement"
+              className="mt-5 flex w-fit cursor-not-allowed items-center gap-2 border border-white/20 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/50"
+            >
+              <Download className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Télécharger la facture
+            </button>
+          </article>
+        );
+      })}
     </div>
   );
 }

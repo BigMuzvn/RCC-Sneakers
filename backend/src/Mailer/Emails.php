@@ -2,6 +2,8 @@
 
 namespace Rcc\Mailer;
 
+use Rcc\Config;
+
 /**
  * Contenu des e-mails transactionnels.
  *
@@ -53,6 +55,84 @@ class Emails
                            actuel reste valable.'
             ),
         ];
+    }
+
+    /**
+     * Confirmation de commande.
+     *
+     * Les lignes viennent de la commande enregistrée, jamais du catalogue : ce
+     * message doit refléter ce qui a été acheté, au prix payé ce jour-là.
+     *
+     * @param array<string,mixed> $order
+     * @return array{subject:string,html:string}
+     */
+    public static function orderConfirmation(string $name, array $order): array
+    {
+        $lignes = '';
+
+        foreach ($order['items'] as $item) {
+            $lignes .= sprintf(
+                '<tr>
+                   <td style="padding:10px 0;border-bottom:1px solid #EDEFF2;font-size:13px;color:#17191C;">
+                     <strong>%s</strong><br>
+                     <span style="font-size:12px;color:#8A9099;">%s — taille %s × %d</span>
+                   </td>
+                   <td style="padding:10px 0;border-bottom:1px solid #EDEFF2;font-size:13px;color:#17191C;text-align:right;white-space:nowrap;">%s</td>
+                 </tr>',
+                self::escape($item['title']),
+                self::escape($item['subtitle']),
+                self::escape($item['size']),
+                (int) $item['qty'],
+                self::xof((int) $item['line_total_xof'])
+            );
+        }
+
+        $recapitulatif = sprintf(
+            '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;font-family:Arial,sans-serif;">
+               %s
+               <tr><td style="padding:12px 0 2px;font-size:12px;color:#8A9099;">Sous-total</td>
+                   <td style="padding:12px 0 2px;font-size:12px;color:#8A9099;text-align:right;">%s</td></tr>
+               <tr><td style="padding:2px 0;font-size:12px;color:#8A9099;">Livraison — %s</td>
+                   <td style="padding:2px 0;font-size:12px;color:#8A9099;text-align:right;">%s</td></tr>
+               <tr><td style="padding:10px 0 0;font-size:14px;font-weight:bold;color:#17191C;border-top:2px solid #17191C;">Total</td>
+                   <td style="padding:10px 0 0;font-size:14px;font-weight:bold;color:#17191C;text-align:right;border-top:2px solid #17191C;">%s</td></tr>
+             </table>',
+            $lignes,
+            self::xof((int) $order['subtotal_xof']),
+            self::escape($order['delivery_label']),
+            self::xof((int) $order['delivery_fee_xof']),
+            self::xof((int) $order['total_xof'])
+        );
+
+        return [
+            'subject' => sprintf('Commande %s confirmée', $order['reference']),
+            'html' => self::layout(
+                title: 'Commande ' . self::escape($order['reference']),
+                body: sprintf(
+                    '<p style="margin:0 0 16px">Bonjour %s,</p>
+                     <p style="margin:0 0 16px">Votre commande est enregistrée. Nous vous appelons au %s pour
+                     confirmer la livraison et la disponibilité des tailles.</p>
+                     %s
+                     <p style="margin:0 0 6px;font-size:12px;color:#8A9099;">Livraison à cette adresse :</p>
+                     <p style="margin:0 0 16px;font-size:13px;color:#3A3E45;">%s</p>
+                     <p style="margin:0 0 16px;font-size:13px;color:#3A3E45;">Règlement <strong>en espèces à la
+                     livraison</strong>. Préparez l\'appoint si possible.</p>',
+                    self::escape($name),
+                    self::escape($order['contact_phone']),
+                    $recapitulatif,
+                    self::escape($order['delivery_address'])
+                ),
+                buttonLabel: 'Suivre ma commande',
+                buttonLink: rtrim((string) Config::get('app.url'), '/') . '/espace-client',
+                footnote: 'Conservez cette référence : elle vous sera demandée pour toute question sur la commande.'
+            ),
+        ];
+    }
+
+    /** Formatage monétaire, aligné sur celui du site. */
+    private static function xof(int $amount): string
+    {
+        return number_format($amount, 0, ',', ' ') . ' F CFA';
     }
 
     private static function layout(

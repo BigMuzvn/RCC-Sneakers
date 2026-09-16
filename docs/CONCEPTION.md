@@ -155,3 +155,51 @@ Sur téléphone, cette gouttière prendrait la moitié de l'écran. Mesuré à 3
 Un faux négatif instructif : `waitForURL` de Playwright rend la main dès le changement d'historique, **avant** que React ait rendu la nouvelle route. Le test voyait la bonne URL et capturait l'ancienne page, concluant à l'absence du bandeau de vérification. Attendre le titre plutôt que l'URL corrige la mesure.
 
 Le parcours qui compte le plus a été vérifié de bout en bout, jeton extrait du journal d'envoi : bandeau affiché → lien réel ouvert → adresse confirmée → bandeau disparu → même lien rejoué et refusé.
+
+## 10. Les commandes
+
+### Une règle qui a décidé de l'architecture
+
+Le serveur ne peut faire confiance à rien de ce que le navigateur dit sur l'argent. Un panier envoie *quels* articles, *quelle* taille, *quelle* quantité — jamais leur prix. Sinon il suffit de modifier une requête pour commander à 0 F.
+
+C'est cette phrase, et elle seule, qui a imposé de porter le catalogue en base. Ce n'était pas une question de confort ni de propreté : sans catalogue côté serveur, il n'existe aucune source de vérité à laquelle comparer ce que le client annonce.
+
+Le stock suit le même raisonnement. Tant qu'il ne vit que dans les modules du front, il est décoratif — rien n'empêche deux clients d'acheter la même dernière paire.
+
+### Figer, à l'inverse du panier
+
+Le panier et les favoris ne stockent que des identifiants, pour suivre le catalogue : si un prix baisse, le panier doit baisser avec lui.
+
+Une commande fait exactement l'inverse. Le prix, le titre, le sous-titre et la taille sont **recopiés** dans `order_items` au moment de l'achat. Changer un tarif ne doit pas réécrire une vente passée, et une facture émise l'an dernier ne doit pas afficher le prix d'aujourd'hui. Les coordonnées de livraison sont recopiées aussi — parce qu'une commande peut être adressée à quelqu'un d'autre, et parce qu'elle doit rester lisible si le client change ensuite de numéro.
+
+C'est le même projet, deux règles opposées, chacune juste dans son contexte.
+
+### La condition est dans la requête, pas avant
+
+```sql
+UPDATE product_variants SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?
+```
+
+Lire le stock, le comparer, puis écrire, laisse une fenêtre entre la lecture et l'écriture. Sous la charge d'un lancement, cette fenêtre suffit à vendre deux fois la même paire. En plaçant la condition dans l'`UPDATE`, c'est la base qui arbitre : si zéro ligne n'est touchée, la course est perdue et la transaction tombe en entier.
+
+La clé étrangère `orders.customer_id` est en `ON DELETE RESTRICT` et non `CASCADE`. Une commande est une pièce comptable : supprimer un compte ne doit pas effacer l'historique des ventes.
+
+### Refuser là où ça compte
+
+Aucun agrégateur de paiement n'est branché. L'option « mobile money / carte » reste visible dans le tunnel, désactivée et étiquetée « bientôt » — mais elle est aussi **refusée par le serveur**. L'interface est contournable ; une garde qui n'existe que dans le navigateur n'en est pas une.
+
+Accepter une commande « en ligne » sans moyen de l'encaisser reviendrait à promettre un règlement impossible.
+
+### La référence a changé de camp
+
+Elle était fabriquée dans le navigateur — `RCC-${Date.now().slice(-6)}`. Deux clients simultanés pouvaient repartir avec la même, et une référence prévisible laisse deviner le numéro des autres, donc le volume d'affaires de la boutique.
+
+Elle est maintenant générée par le serveur, au format `RCC-AAMMJJ-XXXX` : la date situe la commande, le suffixe aléatoire la rend non devinable, et l'unicité est garantie par une contrainte en base.
+
+### Un routeur qui apprend les paramètres
+
+`GET /orders/{reference}` a forcé le routeur à dépasser la correspondance exacte. Deux règles en sont sorties, toutes deux testées : une route fixe l'emporte sur une route à paramètre — sinon `/orders/recents` serait lu comme une référence de commande — et un paramètre ne franchit jamais une barre oblique, car il désigne un segment et non un chemin.
+
+### Ce qu'une fausse piste a coûté
+
+En vérifiant une mesure, un contrôle a été lancé quatre secondes après un envoi d'e-mail. L'index de Brevo accuse quelques dizaines de secondes de retard : la conclusion « l'envoi a échoué » était fausse. La leçon vaut au-delà de Brevo — **un service distant qui répond « pas encore » ne dit pas « jamais »**, et une vérification trop rapprochée fabrique des pannes imaginaires.

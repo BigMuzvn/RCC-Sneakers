@@ -74,9 +74,11 @@ cd backend
 cp config.example.php config.php    # puis renseigner base et clé Brevo
 composer install                    # PHPUnit seulement, en développement
 php migrations/run.php              # crée le schéma
+php migrations/seed.php             # charge le catalogue
 php migrations/run.php --test       # base de test
+php migrations/seed.php --test      # catalogue de test
 php -S localhost:8000 -t public     # l'API
-./vendor/bin/phpunit                # 130 tests
+./vendor/bin/phpunit                # 156 tests
 ```
 
 Vite proxie `/api` vers le port 8000 : le navigateur ne voit qu'une origine, donc le cookie de session se comporte en développement comme en production.
@@ -105,6 +107,11 @@ Le hachage est **bcrypt explicite**, pas Argon2id. Argon2id existe en local, mai
 | `POST /api/auth/password` | exige le mot de passe actuel |
 | `GET /api/favorites` | |
 | `POST /api/favorites/toggle` | `item_type` + `item_id` |
+| `GET /api/products` `GET /api/jerseys` | catalogue, forme identique aux modules `src/data/` |
+| `GET /api/delivery-zones` | zones et tarifs |
+| `POST /api/orders` | passe la commande |
+| `GET /api/orders` | ses commandes |
+| `GET /api/orders/{reference}` | une commande |
 
 Enveloppe constante : `{ "data": … }` ou `{ "error": { code, message, fields } }`, messages en français, champs en `snake_case`.
 
@@ -123,6 +130,34 @@ Le cookie porte `sélecteur.validateur` ; la base ne garde que le sélecteur et 
 **Une réinitialisation révoque toutes les sessions**, sinon une session détournée survit au changement de mot de passe.
 
 **Un envoi raté ne fait jamais échouer une inscription.** Le compte est créé, l'échec journalisé. L'inverse ferme la boutique à chaque panne de Brevo.
+
+## Commandes
+
+**Le serveur ne fait confiance à rien de ce que le navigateur envoie sur l'argent.** Le panier transmet quels articles, quelle taille, quelle quantité. Les prix, les frais de livraison et la disponibilité sont relus en base. Sans cela, n'importe qui commande à 0 F en modifiant une requête — et le stock affiché dans le navigateur ne prouve rien.
+
+C'est cette contrainte, et non le confort, qui a imposé de porter le catalogue en base.
+
+**Une commande fige ses données**, contrairement au panier et aux favoris qui ne stockent que des identifiants pour suivre le catalogue. Le prix, le titre et la taille sont recopiés dans `order_items` au moment de l'achat : changer un tarif ne doit pas réécrire l'histoire, ni faire mentir une facture déjà émise. Les coordonnées de livraison sont recopiées pour la même raison — et parce qu'une commande peut être adressée à quelqu'un d'autre.
+
+**Le stock est décrémenté dans la transaction**, avec la condition dans la requête :
+
+```sql
+UPDATE product_variants SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?
+```
+
+Si zéro ligne n'est touchée, c'est qu'une autre commande est passée entre la lecture et l'écriture : la transaction tombe entièrement. Vérifier puis écrire en deux temps laisserait deux clients acheter la même dernière paire.
+
+**Le paiement en ligne est refusé côté serveur** tant qu'aucun agrégateur n'est branché, et l'option est montrée désactivée dans le tunnel. L'interface est contournable : le refus doit exister là où il compte.
+
+**La référence est générée par le serveur** — `RCC-AAMMJJ-XXXX`. Elle l'était dans le navigateur, où deux clients simultanés pouvaient repartir avec la même. Le suffixe est aléatoire pour qu'un client ne puisse pas déduire le numéro d'un autre, et donc le volume d'affaires de la boutique.
+
+### Le catalogue en base
+
+`php migrations/seed.php` charge `migrations/catalogue.json`, exporté depuis les modules TypeScript qui restent la source d'écriture tant qu'il n'y a pas d'interface d'administration.
+
+Le semoir est **idempotent et ne touche jamais au stock d'une variante existante** : le rejouer après quelques ventes ressusciterait des paires déjà vendues. Même principe pour les tarifs de livraison.
+
+Les composants du front lisent encore leurs modules locaux pour l'affichage ; `GET /api/products` et `GET /api/jerseys` renvoient exactement la même forme, la bascule sera mécanique. En attendant, le stock affiché peut être en retard sur le stock réel — c'est cosmétique, le serveur reste seul juge à la commande.
 
 ## Espace client
 
@@ -158,7 +193,7 @@ backend/
 │   ├── Mailer/             interface + BrevoMailer + LogMailer
 │   └── Controllers/  AuthController.php  FavoritesController.php
 ├── migrations/   001_auth.sql  002_favorites.sql
-└── tests/                  130 tests
+└── tests/                  156 tests
 
 frontend/src/
 ├── components/
@@ -202,9 +237,11 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 
 1. ~~**Authentification**~~ — faite. 12 routes, 130 tests.
 2. ~~**Pages client**~~ — faites. Espace client à trois volets, pages des liens e-mail, favoris, verrou avant paiement.
-3. **Commandes** — `POST /api/orders`. C'est maintenant le seul manque structurel : le tunnel affiche une référence que rien n'enregistre, et le volet « Commandes » n'a donc aucune donnée à montrer.
-4. **Catalogue** — `GET /api/products`, `GET /api/jerseys`. Les modules de `src/data/` sont déjà à la forme attendue.
-5. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
+3. ~~**Commandes**~~ — faites. Catalogue en base, stock réel, lignes figées.
+4. **Agrégateur de paiement** — à choisir (KkiaPay, FedaPay, CinetPay sont les candidats béninois à comparer). Le reste du tunnel l'attend.
+5. **Front sur l'API du catalogue** — remplacer les imports de `src/data/` par des `fetch`, pour que le stock affiché cesse d'être en retard.
+6. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
+7. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
 
 ### Ce qui n'est pas fonctionnel
 
@@ -213,9 +250,10 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Manque | Détail |
 |---|---|
 | Commandes | Le tunnel va jusqu'au bout et affiche une référence, mais **rien n'est enregistré** et la référence est générée côté navigateur. À câbler avant toute mise en ligne. |
-| Suivi de commande | Le volet existe mais reste vide : aucune commande n'est enregistrée. Un aperçu de maquette, signalé comme tel par un cadre pointillé, montre la forme prévue. |
-| Téléchargement de facture | Bouton présent et désactivé, dans l'aperçu. Rien à générer tant que les commandes ne sont pas persistées. |
-| Formulaire de contact | Valide et confirme, **n'envoie rien**. |
+| Paiement en ligne | Refusé par le serveur, désactivé dans le tunnel. Aucun agrégateur n'est branché. Seul le paiement à la livraison fonctionne — et il fonctionne entièrement. |
+| Téléchargement de facture | Bouton présent et désactivé. Le format n'est pas arrêté. |
+| Stock affiché | Le front lit encore ses modules locaux : après une vente, le nombre affiché peut être en retard. Le serveur, lui, refuse une commande au-delà du stock réel. |
+| Formulaire de contact | Valide et confirme, n'envoie rien. |
 | Lettre d'information | Valide et confirme, **n'enregistre rien**. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |

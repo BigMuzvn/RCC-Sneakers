@@ -3,7 +3,9 @@
 namespace Rcc;
 
 use Rcc\Controllers\AuthController;
+use Rcc\Controllers\CatalogueController;
 use Rcc\Controllers\FavoritesController;
+use Rcc\Controllers\OrdersController;
 use Rcc\Mailer\BrevoMailer;
 use Rcc\Mailer\LogMailer;
 use Rcc\Mailer\Mailer;
@@ -42,6 +44,16 @@ class App
         $favorites = new FavoritesController($auth);
         $router->add('GET', '/favorites', fn (Request $r) => $favorites->index($r));
         $router->add('POST', '/favorites/toggle', fn (Request $r) => $favorites->toggle($r));
+
+        $catalogue = new CatalogueController();
+        $router->add('GET', '/products', fn (Request $r) => $catalogue->products($r));
+        $router->add('GET', '/jerseys', fn (Request $r) => $catalogue->jerseys($r));
+        $router->add('GET', '/delivery-zones', fn (Request $r) => $catalogue->deliveryZones($r));
+
+        $orders = new OrdersController($auth, $this->mailer);
+        $router->add('POST', '/orders', fn (Request $r) => $orders->store($r));
+        $router->add('GET', '/orders', fn (Request $r) => $orders->index($r));
+        $router->add('GET', '/orders/{reference}', fn (Request $r, string $ref) => $orders->show($r, $ref));
 
         $response = $router->dispatch($request);
 

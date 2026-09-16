@@ -102,6 +102,55 @@ class RouterTest extends TestCase
         $this->assertSame('détail utile', $response->payload['error']['message']);
     }
 
+    // ------------------------------------------------------- paramètres
+
+    public function test_un_segment_variable_est_transmis_au_gestionnaire(): void
+    {
+        $router = new Router();
+        $router->add('GET', '/orders/{reference}', fn (Request $r, string $ref) => Response::data($ref));
+
+        $response = $router->dispatch($this->get('/orders/RCC-260916-A1B2'));
+
+        $this->assertSame(200, $response->status);
+        $this->assertSame('RCC-260916-A1B2', $response->payload['data']);
+    }
+
+    /**
+     * Une route fixe doit l'emporter sur une route à paramètre qui pourrait
+     * aussi correspondre — sinon /orders/recents serait traité comme une
+     * référence de commande.
+     */
+    public function test_une_route_fixe_gagne_sur_une_route_a_parametre(): void
+    {
+        $router = new Router();
+        $router->add('GET', '/orders/{reference}', fn () => Response::data('variable'));
+        $router->add('GET', '/orders/recents', fn () => Response::data('fixe'));
+
+        $this->assertSame('fixe', $router->dispatch($this->get('/orders/recents'))->payload['data']);
+        $this->assertSame('variable', $router->dispatch($this->get('/orders/RCC-1'))->payload['data']);
+    }
+
+    public function test_un_segment_vide_ne_correspond_pas(): void
+    {
+        $router = new Router();
+        $router->add('GET', '/orders/{reference}', fn () => Response::data('trouvé'));
+
+        $this->assertSame(404, $router->dispatch($this->get('/orders'))->status);
+        $this->assertSame(404, $router->dispatch($this->get('/orders/'))->status);
+    }
+
+    /**
+     * Un paramètre ne traverse pas les segments : /orders/a/b n'est pas une
+     * référence qui contiendrait une barre oblique.
+     */
+    public function test_un_parametre_ne_traverse_pas_les_segments(): void
+    {
+        $router = new Router();
+        $router->add('GET', '/orders/{reference}', fn () => Response::data('trouvé'));
+
+        $this->assertSame(404, $router->dispatch($this->get('/orders/RCC-1/facture'))->status);
+    }
+
     protected function tearDown(): void
     {
         Config::load(require dirname(__DIR__, 2) . '/config.php');

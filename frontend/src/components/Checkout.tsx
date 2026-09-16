@@ -7,26 +7,28 @@ import HangingShoe from './HangingShoe';
 import hangingDunk from '../assets/hanging-dunk-russet.png';
 import { useCart } from '../context/cart-context';
 import { useAuth } from '../context/auth-context';
+import { ApiFailure, api } from '../api/client';
 import { formatXof } from '../utils/format';
 
 const PAGE_GRADIENT =
   'radial-gradient(ellipse 95% 58% at 58% 0%, #6B3520 0%, #40241C 28%, #1F1614 58%, #0B0807 100%)';
 
-/** Placeholder tariffs — confirm with the actual couriers before launch. */
-const ZONES = [
-  { id: 'cotonou', label: 'Cotonou', delay: 'sous 24 h', fee: 1000 },
-  { id: 'nokoue', label: 'Grand Nokoué', delay: 'sous 48 h', fee: 1500 },
-  { id: 'benin', label: 'Reste du Bénin', delay: 'sous 72 h', fee: 2500 },
-] as const;
+type Zone = { id: string; label: string; delay_label: string; fee_xof: number };
 
-/** One online option: the aggregator handles every mobile network and cards behind the same flow. */
+/**
+ * Les modes de paiement restent en dur — ils décrivent ce que la boutique sait
+ * faire, pas des données. Le paiement en ligne est montré mais désactivé :
+ * aucun agrégateur n'est encore branché, et le serveur refuse cette option.
+ * L'afficher comme disponible promettrait un règlement impossible.
+ */
 const PAYMENTS = [
+  { id: 'cash', label: 'Espèces à la livraison', hint: 'Vous réglez au livreur à la réception', available: true },
   {
     id: 'online',
     label: 'Paiement mobile / carte bancaire',
-    hint: 'Tous réseaux mobile money et cartes Visa ou Mastercard',
+    hint: 'Tous réseaux mobile money et cartes Visa ou Mastercard — bientôt disponible',
+    available: false,
   },
-  { id: 'cash', label: 'Espèces à la livraison', hint: 'Vous réglez au livreur à la réception' },
 ] as const;
 
 const inputClass =
@@ -37,9 +39,13 @@ export default function Checkout() {
   const { lines, subtotal, clear, remove } = useCart();
   const { customer, loading } = useAuth();
   const navigate = useNavigate();
-  const [zone, setZone] = useState<(typeof ZONES)[number]['id']>('cotonou');
-  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]['id']>('online');
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zone, setZone] = useState('');
+  const [payment, setPayment] = useState<(typeof PAYMENTS)[number]['id']>('cash');
   const [reference, setReference] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -54,9 +60,65 @@ export default function Checkout() {
     }
   }, [loading, customer, navigate]);
 
-  const fee = ZONES.find((item) => item.id === zone)?.fee ?? 0;
+  // Les tarifs viennent du serveur : ils changeront quand les vrais prix des
+  // coursiers seront connus, et c'est de toute façon le montant en base qui
+  // sera appliqué à la commande.
+  useEffect(() => {
+    api<{ zones: Zone[] }>('/delivery-zones')
+      .then((data) => {
+        setZones(data.zones);
+        setZone((current) => current || (data.zones[0]?.id ?? ''));
+      })
+      .catch(() => setNotice("Impossible de charger les zones de livraison. Rechargez la page."));
+  }, []);
+
+  const fee = zones.find((item) => item.id === zone)?.fee_xof ?? 0;
   const total = subtotal + fee;
   const summary = useMemo(() => lines, [lines]);
+
+  const submitOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrors({});
+    setNotice('');
+    setSubmitting(true);
+
+    const data = new FormData(event.currentTarget);
+
+    try {
+      // Le panier envoie ce qui a été choisi, jamais les prix : c'est le
+      // serveur qui les relit en base et calcule le total.
+      const order = await api<{ order: { reference: string } }>('/orders', {
+        method: 'POST',
+        body: {
+          name: String(data.get('name') ?? ''),
+          email: String(data.get('email') ?? ''),
+          phone: String(data.get('phone') ?? ''),
+          zone,
+          address: String(data.get('address') ?? ''),
+          payment_method: payment,
+          items: lines.map((line) => ({
+            item_type: line.type,
+            item_id: line.id,
+            size: line.size,
+            qty: line.qty,
+          })),
+        },
+      });
+
+      setReference(order.order.reference);
+      clear();
+    } catch (error) {
+      setSubmitting(false);
+
+      if (error instanceof ApiFailure) {
+        setErrors(error.fields);
+        const sansChamp = Object.keys(error.fields).filter((k) => !k.startsWith('items.'));
+        if (sansChamp.length === 0) setNotice(error.message);
+      } else {
+        setNotice('Une erreur est survenue. Réessayez dans un instant.');
+      }
+    }
+  };
 
   return (
     <div className="relative flex min-h-[100svh] w-full flex-col overflow-x-clip">
@@ -125,12 +187,7 @@ export default function Checkout() {
         ) : (
           <form
             className="mt-10 grid grid-cols-1 items-start gap-8 pb-6 sm:mt-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-14"
-            onSubmit={(event) => {
-              event.preventDefault();
-              // TODO: POST /api/orders — nothing is persisted, the reference is generated client-side
-              setReference(`RCC-${String(Date.now()).slice(-6)}`);
-              clear();
-            }}
+            onSubmit={submitOrder}
           >
             {/* ---------- FORM ---------- */}
             <div className="flex flex-col gap-9">
@@ -158,7 +215,7 @@ export default function Checkout() {
               <section>
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#EDEFF2]">2. Livraison</h2>
                 <div className="mt-4 flex flex-col gap-2.5">
-                  {ZONES.map((item) => (
+                  {zones.map((item) => (
                     <label
                       key={item.id}
                       className={`flex cursor-pointer items-center justify-between gap-3 border px-4 py-3.5 transition-colors ${
@@ -178,10 +235,10 @@ export default function Checkout() {
                           <span className="block text-[12px] font-bold uppercase tracking-[0.08em] text-[#EDEFF2]">
                             {item.label}
                           </span>
-                          <span className="block text-[10px] text-white/45">Livraison {item.delay}</span>
+                          <span className="block text-[10px] text-white/45">Livraison {item.delay_label}</span>
                         </span>
                       </span>
-                      <span className="font-display text-[13px] text-[#EDEFF2]">{formatXof(item.fee)}</span>
+                      <span className="font-display text-[13px] text-[#EDEFF2]">{formatXof(item.fee_xof)}</span>
                     </label>
                   ))}
                 </div>
@@ -204,8 +261,13 @@ export default function Checkout() {
                   {PAYMENTS.map((item) => (
                     <label
                       key={item.id}
-                      className={`flex cursor-pointer flex-col gap-1 border px-4 py-3.5 transition-colors ${
-                        payment === item.id ? 'border-[#EDEFF2] bg-white/[0.06]' : 'border-white/15 hover:border-white/35'
+                      aria-disabled={!item.available}
+                      className={`flex flex-col gap-1 border px-4 py-3.5 transition-colors ${
+                        !item.available
+                          ? 'cursor-not-allowed border-white/10 opacity-45'
+                          : payment === item.id
+                            ? 'cursor-pointer border-[#EDEFF2] bg-white/[0.06]'
+                            : 'cursor-pointer border-white/15 hover:border-white/35'
                       }`}
                     >
                       <span className="flex items-center gap-2.5">
@@ -213,6 +275,7 @@ export default function Checkout() {
                           type="radio"
                           name="payment"
                           value={item.id}
+                          disabled={!item.available}
                           checked={payment === item.id}
                           onChange={() => setPayment(item.id)}
                           className="h-3.5 w-3.5 shrink-0 accent-[#EDEFF2]"
@@ -220,18 +283,16 @@ export default function Checkout() {
                         <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#EDEFF2]">
                           {item.label}
                         </span>
+                        {!item.available && (
+                          <span className="ml-auto shrink-0 border border-white/20 px-2 py-[2px] text-[9px] font-bold uppercase tracking-[0.12em] text-white/50">
+                            Bientôt
+                          </span>
+                        )}
                       </span>
                       <span className="pl-6 text-[10px] leading-[1.6] text-white/45">{item.hint}</span>
                     </label>
                   ))}
                 </div>
-
-                {payment === 'online' && (
-                  <p className="mt-4 border border-white/10 bg-white/[0.02] px-4 py-3 text-[10px] leading-[1.7] text-white/50">
-                    Vous serez redirigé vers la page sécurisée de notre prestataire de paiement pour choisir votre
-                    réseau mobile ou saisir votre carte.
-                  </p>
-                )}
               </section>
             </div>
 
@@ -295,11 +356,28 @@ export default function Checkout() {
                 </div>
               </dl>
 
+              {/* Erreurs renvoyées par le serveur. Celles sur `items` méritent
+                  d'être lues : « il n'en reste que 2 en 42 » se produit quand
+                  quelqu'un d'autre a acheté entre-temps. */}
+              {(notice || Object.keys(errors).length > 0) && (
+                <div className="mt-4 border border-[#E2564A]/40 bg-[#E2564A]/[0.08] px-4 py-3">
+                  {notice && <p className="text-[11px] leading-[1.6] text-[#F2A79E]">{notice}</p>}
+                  {Object.entries(errors)
+                    .filter(([key]) => !key.includes('.'))
+                    .map(([key, message]) => (
+                      <p key={key} className="text-[11px] leading-[1.6] text-[#F2A79E]">
+                        {message}
+                      </p>
+                    ))}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="mt-5 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#141516] transition-opacity hover:opacity-90"
+                disabled={submitting || zone === ''}
+                className="mt-5 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#141516] transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Confirmer la commande
+                {submitting ? 'Enregistrement…' : 'Confirmer la commande'}
               </button>
               <button
                 type="button"
