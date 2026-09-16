@@ -8,11 +8,19 @@ Le catalogue est une vitrine complète servie par des modules locaux. Le backend
 
 ## Démarrer
 
+**Deux serveurs, deux terminaux.** Lancer le front seul donne un site qui s'affiche mais dont aucun formulaire ne fonctionne : Vite proxie `/api` vers le port 8000, et si rien n'y répond il renvoie un 502 au lieu d'une réponse de l'API.
+
 ```bash
+# terminal 1 — l'API
+cd backend
+php -S localhost:8000 -t public
+
+# terminal 2 — le front
 cd frontend
-npm install
 npm run dev      # http://localhost:5173
 ```
+
+Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 
 | Commande | Rôle |
 |---|---|

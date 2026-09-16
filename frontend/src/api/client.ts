@@ -67,13 +67,25 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new ApiFailure(
-      response.status,
-      payload?.error ?? {
-        code: 'server_error',
-        message: 'Une erreur est survenue. Réessayez dans un instant.',
-      },
-    );
+    if (payload?.error) {
+      throw new ApiFailure(response.status, payload.error);
+    }
+
+    // Réponse sans enveloppe JSON : ce n'est pas l'API qui a répondu, mais
+    // quelque chose qui s'est interposé — proxy de développement dont la cible
+    // est éteinte, page d'erreur de l'hébergeur. Le distinguer d'une vraie
+    // erreur applicative évite de conseiller « réessayez » quand réessayer ne
+    // servira jamais à rien.
+    const gateway = response.status >= 502 && response.status <= 504;
+
+    throw new ApiFailure(response.status, {
+      code: gateway ? 'api_unreachable' : 'server_error',
+      message: gateway
+        ? import.meta.env.DEV
+          ? "L'API ne répond pas. Le serveur PHP est-il démarré ? php -S localhost:8000 -t backend/public"
+          : 'Le service est momentanément indisponible. Réessayez dans quelques minutes.'
+        : 'Une erreur est survenue. Réessayez dans un instant.',
+    });
   }
 
   return payload?.data as T;
