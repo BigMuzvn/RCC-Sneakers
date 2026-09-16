@@ -49,8 +49,8 @@ class BrevoMailer implements Mailer
         if ($body === false || $status < 200 || $status >= 300) {
             // Journalisé, jamais propagé : une panne chez Brevo ne doit pas
             // empêcher un client de créer son compte.
-            error_log(sprintf(
-                '[rcc] mail: échec pour %s (HTTP %d) %s',
+            $this->logFailure(sprintf(
+                'échec pour %s (HTTP %d) %s',
                 $toEmail,
                 $status,
                 $error !== '' ? $error : (string) $body
@@ -60,6 +60,28 @@ class BrevoMailer implements Mailer
         }
 
         return true;
+    }
+
+    /**
+     * Écrit dans un fichier en plus de error_log.
+     *
+     * error_log part sur la sortie d'erreur de PHP, dont la destination dépend
+     * de la façon dont le serveur a été lancé — avec `php -S`, elle peut aller
+     * nulle part. Un envoi raté est silencieux par conception ; s'il est en plus
+     * intraçable, on ne peut pas distinguer « Brevo a refusé » de « le message
+     * est dans les indésirables », et on cherche la panne du mauvais côté.
+     */
+    private function logFailure(string $message): void
+    {
+        $line = sprintf('[%s] mail: %s', gmdate('Y-m-d H:i:s') . ' UTC', $message);
+
+        error_log('[rcc] ' . $message);
+
+        $dir = dirname(__DIR__, 2) . '/storage/logs';
+
+        if (is_dir($dir) || @mkdir($dir, 0775, true)) {
+            @file_put_contents($dir . '/mail-errors.log', $line . "\n", FILE_APPEND | LOCK_EX);
+        }
     }
 
     /**

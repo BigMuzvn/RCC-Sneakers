@@ -26,6 +26,24 @@ export default function MotDePasseOublie() {
           <p className="mt-3 text-[11px] leading-[1.7] text-white/45">
             Le lien est valable une heure et ne fonctionne qu'une fois. Pensez à regarder dans vos indésirables.
           </p>
+
+          {/* Sortie de secours. La réponse ci-dessus est volontairement
+              conditionnelle — confirmer qu'un compte existe transformerait ce
+              formulaire en annuaire de la clientèle — mais sans cette porte,
+              quelqu'un qui n'a pas encore de compte attend indéfiniment un
+              message qui ne partira jamais. Le lien ne révèle rien : il est
+              montré à tout le monde. */}
+          <p className="mt-4 border-t border-white/10 pt-4 text-[11px] leading-[1.7] text-white/45">
+            Rien reçu au bout de quelques minutes ? Il se peut que cette adresse n'ait pas encore de compte chez
+            nous.{' '}
+            <Link
+              to="/compte?mode=inscription"
+              className="font-bold uppercase tracking-[0.1em] text-white/75 underline underline-offset-2 transition-colors hover:text-white"
+            >
+              En créer un
+            </Link>
+          </p>
+
           <Link
             to="/compte"
             className="mt-6 inline-block border border-white px-6 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white hover:text-[#141516]"
