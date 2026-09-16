@@ -217,8 +217,8 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Téléchargement de facture | Bouton présent et désactivé, dans l'aperçu. Rien à générer tant que les commandes ne sont pas persistées. |
 | Formulaire de contact | Valide et confirme, **n'envoie rien**. |
 | Lettre d'information | Valide et confirme, **n'enregistre rien**. |
-| Domaine vérifié dans Brevo | Le seul expéditeur vérifié est une adresse `@gmail.com`. `gmail.com` publie `p=none` donc rien n'est rejeté, mais son SPF (`redirect=_spf.google.com`) n'inclut pas Brevo : tout envoi échoue SPF et l'alignement DKIM, ce que Gmail et Outlook pèsent lourdement en score anti-spam. Un mail de réinitialisation en indésirables est une fonctionnalité morte. |
-| Expéditeur Brevo | S'appelle encore « ProductHunt Lite ». À renommer dans leur interface. |
+| Domaine vérifié dans Brevo | **Constaté, pas supposé.** Le seul expéditeur déclaré est une adresse `@gmail.com`, que Brevo ne peut pas signer : il réécrit donc l'expéditeur en `godsonmailperso@11837091.brevosend.com`. Brevo rapporte « delivered » — le serveur de Gmail accepte — mais le message atterrit en indésirables ou dans l'onglet Promotions. Un lien de réinitialisation en spam est une fonctionnalité morte. Il faut authentifier un domaine et y poser les enregistrements DKIM/SPF. |
+| Réputation d'envoi | Le compte Brevo porte 18 rebonds durs, 26 souples et 13 blocages hérités d'autres projets. Cela pèse dans le classement anti-spam, en plus du domaine non authentifié. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
 | Fiche maillot | Les cartes maillots ne mènent nulle part, il n'y a pas de page de détail. |
 | Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |

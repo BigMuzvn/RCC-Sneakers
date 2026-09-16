@@ -42,19 +42,25 @@ export default function JerseyCard({ jersey }: { jersey: Jersey }) {
           </div>
         )}
 
-        <span className="absolute left-3 top-3 rounded-full border border-white/25 bg-black/35 px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white/90 backdrop-blur-sm">
-          {jersey.kit}
-        </span>
-        {jersey.is_new_drop && (
-          <span className="absolute right-3 top-3 rounded-full bg-[#EDEFF2] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#17191C]">
-            Nouveau
+        {/* Les pastilles s'empilent à gauche : le coin droit est réservé au
+            cœur, seul élément interactif et le seul présent sur toutes les
+            cartes. Avant, « Nouveau » et la remise se chevauchaient déjà entre
+            eux, tous deux calés en haut à droite. */}
+        <div className="absolute left-3 top-3 z-20 flex flex-col items-start gap-1.5">
+          <span className="rounded-full border border-white/25 bg-black/35 px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white/90 backdrop-blur-sm">
+            {jersey.kit}
           </span>
-        )}
-        {discount !== null && (
-          <span className="absolute right-3 top-3 rounded-full bg-[#C8242F] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white">
-            -{discount}%
-          </span>
-        )}
+          {jersey.is_new_drop && (
+            <span className="rounded-full bg-[#EDEFF2] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#17191C]">
+              Nouveau
+            </span>
+          )}
+          {discount !== null && (
+            <span className="rounded-full bg-[#C8242F] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white">
+              -{discount}%
+            </span>
+          )}
+        </div>
 
         <QuickAdd
           label={`le maillot ${jersey.club}`}
