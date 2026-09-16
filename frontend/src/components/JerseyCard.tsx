@@ -1,7 +1,10 @@
 import type { Jersey } from '../data/jerseys';
 import { formatXof } from '../utils/format';
+import { useCart } from '../context/cart-context';
+import QuickAdd from './QuickAdd';
 
 export default function JerseyCard({ jersey }: { jersey: Jersey }) {
+  const { add } = useCart();
   const inStock = jersey.variants.filter((variant) => variant.stock > 0);
   const discount = jersey.old_price_xof
     ? Math.round((1 - jersey.price_xof / jersey.old_price_xof) * 100)
@@ -49,6 +52,24 @@ export default function JerseyCard({ jersey }: { jersey: Jersey }) {
             -{discount}%
           </span>
         )}
+
+        <QuickAdd
+          label={`le maillot ${jersey.club}`}
+          sizes={jersey.variants.map((variant) => ({ label: variant.size, stock: variant.stock }))}
+          onAdd={(size) =>
+            add({
+              type: 'jersey',
+              id: jersey.id,
+              href: null,
+              title: jersey.club,
+              subtitle: `${jersey.kit} · ${jersey.season}`,
+              size,
+              unit_price_xof: jersey.price_xof,
+              image: jersey.image,
+              accent: jersey.accent,
+            })
+          }
+        />
       </div>
 
       <div className="flex flex-1 flex-col p-3 sm:p-4">

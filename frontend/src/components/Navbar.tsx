@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import rccLogo from '../assets/rcc-logo.png';
+import { useCart } from '../context/cart-context';
 
 const NAV_LINKS = [
   { label: 'Accueil', to: '/' },
@@ -13,6 +14,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { count, openCart } = useCart();
 
   return (
     <>
@@ -42,16 +44,26 @@ export default function Navbar() {
           <button type="button" aria-label="Rechercher" className="text-white/90 transition-colors hover:text-white">
             <Search className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
-          <button type="button" aria-label="Panier" className="text-white/90 transition-colors hover:text-white">
-            <ShoppingCart className="h-[18px] w-[18px]" strokeWidth={2} />
-          </button>
           <button
             type="button"
+            onClick={openCart}
+            aria-label={count > 0 ? `Panier, ${count} article${count > 1 ? 's' : ''}` : 'Panier'}
+            className="relative text-white/90 transition-colors hover:text-white"
+          >
+            <ShoppingCart className="h-[18px] w-[18px]" strokeWidth={2} />
+            {count > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#EDEFF2] px-1 text-[9px] font-bold text-[#17191C]">
+                {count}
+              </span>
+            )}
+          </button>
+          <Link
+            to="/compte"
             aria-label="Mon compte"
             className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C] transition-opacity hover:opacity-80"
           >
             <User className="h-3.5 w-3.5" strokeWidth={2.4} />
-          </button>
+          </Link>
           <button
             type="button"
             aria-label="Ouvrir le menu"

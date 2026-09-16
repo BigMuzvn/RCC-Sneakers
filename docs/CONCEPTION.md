@@ -64,8 +64,28 @@ Le titre a donc été **sorti de la grille** pour reprendre la structure exacte 
 
 À retenir : c'est le **bas** de ce visuel qui repousse tout le reste. Pour l'agrandir, on le remonte plutôt que de l'étaler — il est calé à 95 px du haut, soit 27 px sous la barre de navigation. Ses marges transparentes ont aussi été détourées, ce qui donne 5 % de taille utile en plus à encombrement égal.
 
-## 5. Méthode de travail
+## 5. Pièges Tailwind rencontrés
+
+Deux bugs invisibles à la lecture du code, tous deux trouvés en inspectant le rendu réel.
+
+**Une opacité hors échelle est silencieusement supprimée.** Le panneau de choix de taille sur les cartes produit utilisait `bg-[#0B0C0E]/94`. Or **94 n'existe pas** dans l'échelle d'opacité de Tailwind (…, 90, 95, 100) : la classe n'est jamais générée, aucune erreur n'est levée, et le panneau se retrouve sans aucun fond. Les tailles flottaient directement sur la photo du produit, illisibles. Vérifiable en compilant le CSS et en cherchant la classe — elle est absente.
+
+**Une marge négative sur un élément positionné par `bottom` descend l'élément.** En corrigeant l'écart RCC/titre, la première tentative a aggravé le décalage parce que j'avais supposé l'inverse. La mesure l'a montré immédiatement.
+
+## 6. Le panier
+
+Trois décisions de conception qui ne se devinent pas à la lecture :
+
+**Le panier ne persiste que des identifiants.** Stocker les lignes complètes paraît plus simple, mais les URL d'images sont des empreintes de build : elles changent à chaque compilation, et un panier enregistré avant un redéploiement afficherait des images mortes. Seuls `{ type, id, size, qty }` sont écrits, les lignes sont reconstruites depuis le catalogue au chargement.
+
+**Ajouter n'ouvre pas le tiroir.** C'était le comportement initial, corrigé à l'usage : pour ajouter trois paires, il fallait fermer le panneau trois fois. Une notification transitoire le remplace.
+
+**Les cartes utilisent un lien étiré, pas un lien englobant.** Un `<button>` dans un `<a>` est du HTML invalide. La carte est donc un `<article>` avec un lien en `absolute inset-0`, et le bouton d'ajout rapide passe au-dessus avec un `z-index` supérieur.
+
+## 7. Méthode de travail
 
 Chaque changement d'interface est **vérifié dans un vrai navigateur** avant d'être annoncé : Playwright, captures en 1400 / 1280 / 768 / 390 / 375 / 360 px, et contrôle programmatique de l'absence de débordement horizontal et vertical.
 
-Ce sont ces passages qui ont révélé la paire suspendue totalement invisible, le swoosh noir sur fond noir, la boîte à chaussures collée aux icônes mobiles, l'encart de statistiques débordant de son cadre, et les décalages de titre ci-dessus. Aucun de ces défauts n'était visible dans le code.
+Ce sont ces passages qui ont révélé la paire suspendue totalement invisible, le swoosh noir sur fond noir, la boîte à chaussures collée aux icônes mobiles, l'encart de statistiques débordant de son cadre, le panneau de tailles sans fond, et les décalages de titre ci-dessus. Aucun de ces défauts n'était visible dans le code.
+
+Les mesures sont faites **numériquement** plutôt qu'à l'œil : position des titres au pixel, largeur de défilement comparée à la largeur visible, totaux du panier recalculés après chaque action, styles calculés lus dans le navigateur. C'est ce qui a permis d'affirmer que les titres des cinq pages internes sont alignés au pixel près, et pas seulement qu'ils en ont l'air.

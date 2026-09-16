@@ -39,9 +39,20 @@ npm run dev      # http://localhost:5173
 | `/boutique/:slug` | Fiche produit — tailles, stock, suggestions |
 | `/maillots` | 12 maillots de clubs et sélections, filtre par championnat |
 | `/soldes` | 8 modèles en remise, 3 tris |
+| `/compte` | Connexion et inscription sur une page, avec interrupteur |
+| `/checkout` | Coordonnées, livraison, paiement, récapitulatif |
 | `/contact` | Formulaire et coordonnées |
+| `/mentions-legales` `/cgv` `/confidentialite` `/cookies` `/livraison-retours` `/authenticite` | Pages légales, gabarit commun |
 
 L'accueil tient en un écran sans défilement (`100svh`) et n'a donc **pas de footer** ; toutes les autres pages en ont un.
+
+## Panier
+
+Le panier vit dans un contexte React (`src/context/`) et **persiste dans le navigateur**. Il ne stocke que `{ type, id, size, qty }` puis reconstruit les lignes depuis le catalogue au chargement : les URL d'images sont des empreintes de build qui changent à chaque compilation, un panier stocké en dur casserait au premier redéploiement.
+
+Il gère indifféremment les sneakers (tailles 39-45) et les maillots (S-XXL). L'ajout se fait depuis les cartes via un panneau de tailles superposé, sans quitter la page, ou depuis la fiche produit. Un ajout n'ouvre **pas** le tiroir — il déclenche une notification, pour qu'on puisse enchaîner plusieurs articles.
+
+Le fichier est scindé en deux : `cart-context.ts` porte le contexte, les types et le hook, `CartContext.tsx` ne contient que le composant fournisseur. C'est ce qui évite l'avertissement de rafraîchissement à chaud de React.
 
 ## Structure
 
@@ -82,14 +93,32 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 
 ## État actuel
 
-**Fait** : les 6 pages, le responsive (vérifié de 360 à 1400 px, sans débordement), les filtres et tris, le sélecteur de tailles avec stock, le menu mobile, le footer.
+**Fait** : les 11 routes, le responsive (vérifié de 360 à 1400 px, sans débordement horizontal ni vertical), les filtres et tris, le sélecteur de tailles avec stock, le panier complet avec persistance, le tunnel de commande, le menu mobile, le footer et sa lettre d'information.
 
-**Pas fait, volontairement :**
+### La prochaine étape : le backend
+
+Le front est en avance sur le back, et **certaines pages ne peuvent pas être écrites avant lui**. En particulier, l'espace client (commandes, adresses, favoris) suppose une authentification réelle — il faut donc commencer par là.
+
+Ordre suggéré :
+
+1. **Authentification** — `POST /api/auth/register`, `POST /api/auth/login`, session ou jeton. Débloque l'espace client.
+2. **Commandes** — `POST /api/orders`, le manque le plus critique aujourd'hui.
+3. **Catalogue** — `GET /api/products`, `GET /api/jerseys`. Les modules de `src/data/` sont déjà à la forme attendue.
+4. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
+
+### Ce qui n'est pas fonctionnel
+
+Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 
 | Manque | Détail |
 |---|---|
-| Panier | Les boutons « Ajouter au panier » sont inertes. Choix assumé : mieux vaut un bouton inerte qu'un faux « ajouté ✓ » menant à un panier vide. |
-| Formulaire de contact | Valide les champs et affiche une confirmation, mais **n'envoie rien**. À câbler sur `POST /api/contact` avant toute mise en ligne. |
-| Fiche maillot | Les cartes maillots ne sont pas cliquables, il n'y a pas encore de page de détail. |
-| Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent alors sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |
-| Coordonnées | Téléphone, e-mail et liens réseaux sont des valeurs de remplacement, centralisées en haut de `Footer.tsx` et `Contact.tsx`. |
+| Commandes | Le tunnel va jusqu'au bout et affiche une référence, mais **rien n'est enregistré** et la référence est générée côté navigateur. À câbler avant toute mise en ligne. |
+| Authentification | Les formulaires valident et affichent une confirmation, mais **aucune session n'est créée**. |
+| Formulaire de contact | Valide et confirme, **n'envoie rien**. |
+| Lettre d'information | Valide et confirme, **n'enregistre rien**. |
+| Espace client | Pas encore commencé — dépend de l'authentification. |
+| Fiche maillot | Les cartes maillots ne mènent nulle part, il n'y a pas de page de détail. |
+| Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |
+| Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |
+| Tarifs de livraison | 1 000 / 1 500 / 2 500 F CFA sont des valeurs de remplacement, en haut de `Checkout.tsx`. |
+| Coordonnées | Téléphone, e-mail et liens réseaux sont des valeurs de remplacement, en haut de `Footer.tsx` et `Contact.tsx`. |

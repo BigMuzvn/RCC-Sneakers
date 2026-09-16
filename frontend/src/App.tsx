@@ -5,18 +5,34 @@ import ProductDetail from './components/ProductDetail';
 import Contact from './components/Contact';
 import Soldes from './components/Soldes';
 import Maillots from './components/Maillots';
+import Compte from './components/Compte';
+import Checkout from './components/Checkout';
+import PageLegale from './components/PageLegale';
+import CartDrawer from './components/CartDrawer';
+import CartToast from './components/CartToast';
+import { CartProvider } from './context/CartContext';
+import { LEGAL_SLUGS } from './data/legal';
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Hero />} />
-        <Route path="/boutique" element={<Boutique />} />
-        <Route path="/boutique/:slug" element={<ProductDetail />} />
-        <Route path="/maillots" element={<Maillots />} />
-        <Route path="/soldes" element={<Soldes />} />
-        <Route path="/contact" element={<Contact />} />
-      </Routes>
+      <CartProvider>
+        <Routes>
+          <Route path="/" element={<Hero />} />
+          <Route path="/boutique" element={<Boutique />} />
+          <Route path="/boutique/:slug" element={<ProductDetail />} />
+          <Route path="/maillots" element={<Maillots />} />
+          <Route path="/soldes" element={<Soldes />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/compte" element={<Compte />} />
+          <Route path="/checkout" element={<Checkout />} />
+          {LEGAL_SLUGS.map((slug) => (
+            <Route key={slug} path={`/${slug}`} element={<PageLegale slug={slug} />} />
+          ))}
+        </Routes>
+        <CartDrawer />
+        <CartToast />
+      </CartProvider>
     </BrowserRouter>
   );
 }

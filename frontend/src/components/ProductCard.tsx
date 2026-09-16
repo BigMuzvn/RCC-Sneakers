@@ -1,18 +1,25 @@
 import { Link } from 'react-router-dom';
 import type { Product } from '../data/products';
 import { formatXof } from '../utils/format';
+import { useCart } from '../context/cart-context';
+import QuickAdd from './QuickAdd';
 
 export default function ProductCard({ product }: { product: Product }) {
+  const { add } = useCart();
   const inStock = product.variants.filter((variant) => variant.stock > 0).length;
   const discount = product.old_price_xof
     ? Math.round((1 - product.price_xof / product.old_price_xof) * 100)
     : null;
 
   return (
-    <Link
-      to={`/boutique/${product.slug}`}
-      className="group relative flex flex-col overflow-hidden border border-white/10 bg-white/[0.02] transition-colors duration-300 hover:border-white/25 hover:bg-white/[0.04]"
-    >
+    <article className="group relative flex flex-col overflow-hidden border border-white/10 bg-white/[0.02] transition-colors duration-300 hover:border-white/25 hover:bg-white/[0.04]">
+      {/* stretched link: keeps the whole card clickable without nesting buttons inside an anchor */}
+      <Link
+        to={`/boutique/${product.slug}`}
+        className="absolute inset-0 z-10"
+        aria-label={`${product.brand} ${product.model} — ${product.colorway}`}
+      />
+
       <div className="relative aspect-[4/3] overflow-hidden">
         <div
           aria-hidden="true"
@@ -41,15 +48,33 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
 
         {product.is_new_drop && (
-          <span className="absolute left-3 top-3 rounded-full bg-[#EDEFF2] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#17191C]">
+          <span className="absolute left-3 top-3 z-20 rounded-full bg-[#EDEFF2] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-[#17191C]">
             Nouveau
           </span>
         )}
         {discount !== null && (
-          <span className="absolute right-3 top-3 rounded-full bg-[#C8242F] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white">
+          <span className="absolute right-3 top-3 z-20 rounded-full bg-[#C8242F] px-2.5 py-[3px] text-[9px] font-bold uppercase tracking-[0.1em] text-white">
             -{discount}%
           </span>
         )}
+
+        <QuickAdd
+          label={`${product.brand} ${product.model}`}
+          sizes={product.variants.map((variant) => ({ label: String(variant.size), stock: variant.stock }))}
+          onAdd={(size) =>
+            add({
+              type: 'sneaker',
+              id: product.id,
+              href: `/boutique/${product.slug}`,
+              title: `${product.brand} ${product.model}`,
+              subtitle: product.colorway,
+              size,
+              unit_price_xof: product.price_xof,
+              image: product.image,
+              accent: product.accent,
+            })
+          }
+        />
       </div>
 
       <div className="flex flex-1 flex-col p-3 sm:p-4">
@@ -73,6 +98,6 @@ export default function ProductCard({ product }: { product: Product }) {
           </span>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }

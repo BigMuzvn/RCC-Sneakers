@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { useCart } from '../context/cart-context';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ProductCard from './ProductCard';
@@ -19,10 +20,27 @@ export default function ProductDetail() {
 
 function ProductView({ product }: { product: Product }) {
   const [size, setSize] = useState<number | null>(null);
+  const { add } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  const addToCart = () => {
+    if (size === null) return;
+    add({
+      type: 'sneaker',
+      id: product.id,
+      href: `/boutique/${product.slug}`,
+      title: `${product.brand} ${product.model}`,
+      subtitle: product.colorway,
+      size: String(size),
+      unit_price_xof: product.price_xof,
+      image: product.image,
+      accent: product.accent,
+    });
+  };
 
   const related = useMemo(
     () => PRODUCTS.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 4),
@@ -160,6 +178,7 @@ function ProductView({ product }: { product: Product }) {
               <button
                 type="button"
                 disabled={!size}
+                onClick={addToCart}
                 className="flex-1 bg-white px-4 py-3.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[#141516] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30 sm:tracking-[0.14em]"
               >
                 Ajouter au panier
@@ -167,6 +186,10 @@ function ProductView({ product }: { product: Product }) {
               <button
                 type="button"
                 disabled={!size}
+                onClick={() => {
+                  addToCart();
+                  navigate('/checkout');
+                }}
                 className="flex-1 border border-white px-4 py-3.5 text-[11px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white hover:text-[#141516] disabled:cursor-not-allowed disabled:opacity-30 sm:tracking-[0.14em]"
               >
                 Acheter

@@ -1,14 +1,78 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { ArrowRight, Check, Mail, MapPin, Phone } from 'lucide-react';
 import rccLogo from '../assets/rcc-logo.png';
+import { LEGAL_PAGES, LEGAL_SLUGS } from '../data/legal';
 
 const SOCIALS = ['Instagram', 'Facebook', 'WhatsApp'];
+
+function Newsletter() {
+  const [signedUp, setSignedUp] = useState(false);
+
+  return (
+    <div className="border-y border-white/10 py-8 sm:py-10">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+        <div className="max-w-md">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#EDEFF2]">
+            Les drops avant tout le monde
+          </h2>
+          <p className="mt-2 text-[11px] leading-[1.7] text-white/50">
+            Nouvelles arrivées, restocks et ventes privées. Un message quand il y a vraiment quelque chose, jamais plus.
+          </p>
+        </div>
+
+        {signedUp ? (
+          <div className="flex items-center gap-3 lg:w-[420px]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C]">
+              <Check className="h-4 w-4" strokeWidth={2.5} />
+            </span>
+            <p className="text-[11px] leading-[1.6] text-white/70">
+              Inscription enregistrée. À très vite pour le prochain drop.
+            </p>
+          </div>
+        ) : (
+          <form
+            className="flex w-full items-stretch gap-2 lg:w-[420px]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              // TODO: POST /api/newsletter — nothing is stored yet
+              setSignedUp(true);
+            }}
+          >
+            <label htmlFor="newsletter-email" className="sr-only">
+              Votre adresse e-mail
+            </label>
+            <input
+              required
+              id="newsletter-email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              placeholder="vous@exemple.com"
+              className="min-w-0 flex-1 border border-white/15 bg-white/[0.03] px-3.5 py-3 text-[12px] text-white placeholder:text-white/35 transition-colors focus:border-white/50 focus:outline-none"
+            />
+            <button
+              type="submit"
+              aria-label="S’inscrire à la lettre d’information"
+              className="flex shrink-0 items-center gap-2 bg-white px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 sm:px-6"
+            >
+              <span className="hidden sm:inline">S’inscrire</span>
+              <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Footer() {
   return (
     <footer className="relative mt-8 overflow-hidden border-t border-white/10 bg-[#07080A]">
       <div className="relative z-10 px-4 pb-8 pt-12 sm:px-8 sm:pt-14 lg:px-14">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4 lg:gap-10">
+        <Newsletter />
+
+        <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4 lg:gap-10">
           {/* brand */}
           <div className="col-span-2 lg:col-span-1">
             <Link to="/" className="flex w-fit flex-col items-center" aria-label="RCC Sneakers — accueil">
@@ -86,7 +150,23 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        {/* legal pages */}
+        <nav aria-label="Informations légales" className="mt-12 border-t border-white/10 pt-6">
+          <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            {LEGAL_SLUGS.map((slug) => (
+              <li key={slug}>
+                <Link
+                  to={`/${slug}`}
+                  className="text-[10px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white"
+                >
+                  {LEGAL_PAGES[slug].navLabel}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[10px] uppercase tracking-[0.14em] text-white/35">
             © {new Date().getFullYear()} RCC Sneakers — Cotonou, Bénin
           </p>
