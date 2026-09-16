@@ -1,0 +1,55 @@
+<?php
+
+namespace Rcc;
+
+use Rcc\Controllers\AuthController;
+use Rcc\Mailer\BrevoMailer;
+use Rcc\Mailer\LogMailer;
+use Rcc\Mailer\Mailer;
+
+/**
+ * Assemblage de l'application : routes, dépendances, cookies.
+ *
+ * Point d'entrée unique, partagé par public/index.php et par les tests — ce
+ * qui garantit que les tests exercent exactement le même chemin que la
+ * production, et non une version simplifiée.
+ */
+class App
+{
+    public function __construct(private Mailer $mailer)
+    {
+    }
+
+    public function handle(Request $request): Response
+    {
+        $cookies = new CookieJar($request->cookies);
+        $auth = new Auth($cookies);
+        $controller = new AuthController($auth, $this->mailer);
+
+        $router = new Router();
+        $router->add('POST', '/auth/register', fn (Request $r) => $controller->register($r));
+        $router->add('POST', '/auth/login', fn (Request $r) => $controller->login($r));
+        $router->add('POST', '/auth/logout', fn (Request $r) => $controller->logout($r));
+        $router->add('GET', '/auth/me', fn (Request $r) => $controller->me($r));
+        $router->add('POST', '/auth/verify-email', fn (Request $r) => $controller->verifyEmail($r));
+        $router->add('POST', '/auth/resend-verification', fn (Request $r) => $controller->resendVerification($r));
+        $router->add('POST', '/auth/forgot-password', fn (Request $r) => $controller->forgotPassword($r));
+        $router->add('POST', '/auth/reset-password', fn (Request $r) => $controller->resetPassword($r));
+
+        $response = $router->dispatch($request);
+
+        // Les cookies posés pendant le traitement sont recollés ici : le
+        // contrôleur n'a jamais à s'occuper d'en-têtes HTTP.
+        $response->cookies = $cookies->headers();
+
+        return $response;
+    }
+
+    /** Pilote d'envoi choisi par config.php. */
+    public static function mailer(): Mailer
+    {
+        return Config::get('mail.driver') === 'log'
+            ? new LogMailer()
+            : new BrevoMailer();
+    }
+}

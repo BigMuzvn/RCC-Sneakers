@@ -1,0 +1,11 @@
+# Secrets — ne JAMAIS commiter. Voir config.example.php pour le gabarit.
+config.php
+
+# Dépendances de développement uniquement (PHPUnit). La production n'en a aucune.
+/vendor/
+
+# Sessions et journaux locaux
+/storage/
+
+# Artefact d'exécution de PHPUnit
+.phpunit.result.cache

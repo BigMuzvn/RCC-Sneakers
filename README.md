@@ -2,7 +2,7 @@
 
 Front-end d'une boutique de sneakers et de maillots basée à **Cotonou, Bénin**. Prix en F CFA, interface en français.
 
-Le site est aujourd'hui une vitrine complète mais **sans backend** : toutes les données viennent de modules locaux dont la forme reproduit déjà celle de la future API PHP.
+Le catalogue est une vitrine complète servie par des modules locaux. Le backend a démarré : **l'authentification est faite** — inscription, connexion par e-mail ou téléphone, sessions, vérification d'adresse et réinitialisation de mot de passe.
 
 ---
 
@@ -28,7 +28,8 @@ npm run dev      # http://localhost:5173
 - **react-router-dom** pour la navigation
 - **lucide-react** pour les icônes — attention, la v1 a retiré les icônes de marque (`Instagram`, `Facebook` n'existent plus)
 - **@fontsource/poppins** et **@fontsource/archivo-black**, auto-hébergées
-- Backend **PHP + MySQL** prévu, pas encore commencé (`backend/` est vide)
+- Backend **PHP 8 natif + MySQL**, sans aucune dépendance en production
+- **Brevo** pour l'e-mail transactionnel
 
 ## Pages
 
@@ -54,9 +55,75 @@ Il gère indifféremment les sneakers (tailles 39-45) et les maillots (S-XXL). L
 
 Le fichier est scindé en deux : `cart-context.ts` porte le contexte, les types et le hook, `CartContext.tsx` ne contient que le composant fournisseur. C'est ce qui évite l'avertissement de rafraîchissement à chaud de React.
 
+## Backend
+
+```bash
+cd backend
+cp config.example.php config.php    # puis renseigner base et clé Brevo
+composer install                    # PHPUnit seulement, en développement
+php migrations/run.php              # crée le schéma
+php migrations/run.php --test       # base de test
+php -S localhost:8000 -t public     # l'API
+./vendor/bin/phpunit                # 109 tests
+```
+
+Vite proxie `/api` vers le port 8000 : le navigateur ne voit qu'une origine, donc le cookie de session se comporte en développement comme en production.
+
+### Pourquoi du PHP natif
+
+**Aucune dépendance ne part en production.** `vendor/` ne contient que PHPUnit, et l'autoloader est huit lignes de PSR-4 dans `backend/autoload.php`. L'API se déploie par FTP et tourne sur un mutualisé à quelques milliers de francs par mois — c'est un argument commercial autant qu'une contrainte.
+
+Le SQL est délibérément conservateur : développement en MySQL 8.4, production probable en 5.7 ou MariaDB 10.x. Pas de CTE, pas de `CHECK` (silencieusement ignoré en 5.7), collation `utf8mb4_unicode_ci`, colonnes indexées en `VARCHAR(191)` — en utf8mb4 un index sur 255 caractères pèse 1020 octets et dépasse la limite de 767 des anciens InnoDB.
+
+Le hachage est **bcrypt explicite**, pas Argon2id. Argon2id existe en local, mais beaucoup de mutualisés compilent PHP sans sodium : un hachage que l'hébergeur ne sait pas relire enfermerait tous les clients dehors.
+
+### Routes d'authentification
+
+| Route | Rôle |
+|---|---|
+| `POST /api/auth/register` | crée le compte, connecte, envoie le lien de vérification |
+| `POST /api/auth/login` | `identifier` = **e-mail ou téléphone**, `password`, `remember` |
+| `POST /api/auth/logout` | révoque le jeton de cette session uniquement |
+| `GET /api/auth/me` | client courant, ou 401 |
+| `POST /api/auth/verify-email` | consomme le jeton reçu par mail |
+| `POST /api/auth/resend-verification` | |
+| `POST /api/auth/forgot-password` | |
+| `POST /api/auth/reset-password` | |
+
+Enveloppe constante : `{ "data": … }` ou `{ "error": { code, message, fields } }`, messages en français, champs en `snake_case`.
+
+### Sessions
+
+Pas de sessions natives PHP. Sur un mutualisé, leurs fichiers atterrissent souvent dans un répertoire temporaire partagé entre comptes. Un jeton en base couvre la session **et** le « se souvenir de moi » — seule la durée change — survit à un changement de serveur, et se révoque réellement côté serveur.
+
+Le cookie porte `sélecteur.validateur` ; la base ne garde que le sélecteur et le **SHA-256** du validateur. Une fuite de la table ne donne aucune session utilisable. Comparaison par `hash_equals`, pour que la durée de réponse ne laisse pas deviner le jeton.
+
+### Ce qui n'est pas négociable dans ce code
+
+**Aucun oracle d'énumération.** Mot de passe faux et compte inconnu renvoient le même statut, le même message et la même durée — un `password_verify` factice est exécuté quand aucun compte n'est trouvé. `forgot-password` répond identiquement dans tous les cas. Sans cela ces formulaires diraient à n'importe qui qui est client de la boutique.
+
+**Limitation de débit sur les routes d'envoi.** Le forfait Brevo est à **300 e-mails par jour**. Sans plafond, marteler `forgot-password` l'épuise en une minute et coupe tous les e-mails de la boutique, confirmations de commande comprises, jusqu'au lendemain — une panne totale déclenchable depuis un navigateur.
+
+**Une réinitialisation révoque toutes les sessions**, sinon une session détournée survit au changement de mot de passe.
+
+**Un envoi raté ne fait jamais échouer une inscription.** Le compte est créé, l'échec journalisé. L'inverse ferme la boutique à chaque panne de Brevo.
+
 ## Structure
 
 ```
+backend/
+├── autoload.php            PSR-4 maison, pour se passer de Composer en production
+├── public/index.php        contrôleur frontal — seul fichier exposé
+├── src/
+│   ├── App.php             routes et assemblage, partagé par index.php et les tests
+│   ├── Auth.php            sessions par jeton en base
+│   ├── CustomerToken.php   jetons e-mail à usage unique
+│   ├── RateLimiter.php  CookieJar.php  Validator.php  Phone.php
+│   ├── Mailer/             interface + BrevoMailer + LogMailer
+│   └── Controllers/AuthController.php
+├── migrations/001_auth.sql
+└── tests/                  109 tests
+
 frontend/src/
 ├── components/
 │   ├── Hero.tsx            accueil, carrousel et fond par slide
@@ -95,16 +162,13 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 
 **Fait** : les 11 routes, le responsive (vérifié de 360 à 1400 px, sans débordement horizontal ni vertical), les filtres et tris, le sélecteur de tailles avec stock, le panier complet avec persistance, le tunnel de commande, le menu mobile, le footer et sa lettre d'information.
 
-### La prochaine étape : le backend
+### La prochaine étape
 
-Le front est en avance sur le back, et **certaines pages ne peuvent pas être écrites avant lui**. En particulier, l'espace client (commandes, adresses, favoris) suppose une authentification réelle — il faut donc commencer par là.
-
-Ordre suggéré :
-
-1. **Authentification** — `POST /api/auth/register`, `POST /api/auth/login`, session ou jeton. Débloque l'espace client.
-2. **Commandes** — `POST /api/orders`, le manque le plus critique aujourd'hui.
-3. **Catalogue** — `GET /api/products`, `GET /api/jerseys`. Les modules de `src/data/` sont déjà à la forme attendue.
-4. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
+1. ~~**Authentification**~~ — faite. 8 routes, 109 tests.
+2. **Pages client** — brancher `Compte.tsx` sur l'API, puis écrire l'espace client que `GET /api/auth/me` débloque. Deux routes front restent à créer, celles vers lesquelles pointent les e-mails : `/compte/verifier` et `/compte/reinitialiser`.
+3. **Commandes** — `POST /api/orders`, le manque le plus critique aujourd'hui.
+4. **Catalogue** — `GET /api/products`, `GET /api/jerseys`. Les modules de `src/data/` sont déjà à la forme attendue.
+5. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
 
 ### Ce qui n'est pas fonctionnel
 
@@ -113,10 +177,14 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Manque | Détail |
 |---|---|
 | Commandes | Le tunnel va jusqu'au bout et affiche une référence, mais **rien n'est enregistré** et la référence est générée côté navigateur. À câbler avant toute mise en ligne. |
-| Authentification | Les formulaires valident et affichent une confirmation, mais **aucune session n'est créée**. |
+| Authentification (front) | L'API est faite et testée, mais `Compte.tsx` ne l'appelle pas encore : le formulaire valide et affiche une confirmation sans créer de session. C'est du câblage, pas de la conception. |
 | Formulaire de contact | Valide et confirme, **n'envoie rien**. |
 | Lettre d'information | Valide et confirme, **n'enregistre rien**. |
-| Espace client | Pas encore commencé — dépend de l'authentification. |
+| Espace client | Pas encore écrit, mais **plus bloqué** : `GET /api/auth/me` existe. |
+| Pages `/compte/verifier` et `/compte/reinitialiser` | Les e-mails pointent déjà vers ces deux adresses, qui n'existent pas encore côté front. À créer avant toute mise en ligne, sinon les liens envoyés mènent à une page blanche. |
+| Domaine vérifié dans Brevo | Le seul expéditeur vérifié est une adresse `@gmail.com`. `gmail.com` publie `p=none` donc rien n'est rejeté, mais son SPF (`redirect=_spf.google.com`) n'inclut pas Brevo : tout envoi échoue SPF et l'alignement DKIM, ce que Gmail et Outlook pèsent lourdement en score anti-spam. Un mail de réinitialisation en indésirables est une fonctionnalité morte. |
+| Expéditeur Brevo | S'appelle encore « ProductHunt Lite ». À renommer dans leur interface. |
+| Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
 | Fiche maillot | Les cartes maillots ne mènent nulle part, il n'y a pas de page de détail. |
 | Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |
 | Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |

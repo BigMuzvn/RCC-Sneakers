@@ -1,0 +1,6 @@
+# Filet de sécurité : si backend/ se retrouvait par erreur dans la racine web,
+# ce fichier bloque l'accès à tout sauf public/. La bonne installation reste
+# de placer src/, config.php et migrations/ AU-DESSUS de public_html/.
+<FilesMatch "\.(php|sql|json|log)$">
+    Require all denied
+</FilesMatch>

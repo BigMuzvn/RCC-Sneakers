@@ -1,0 +1,12 @@
+# Toutes les requêtes passent par index.php.
+# À déposer dans public_html/api/ avec index.php en production.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Le listing de répertoire ne doit jamais révéler ce qui est déposé ici.
+Options -Indexes

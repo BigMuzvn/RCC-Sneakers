@@ -89,3 +89,33 @@ Chaque changement d'interface est **vérifié dans un vrai navigateur** avant d'
 Ce sont ces passages qui ont révélé la paire suspendue totalement invisible, le swoosh noir sur fond noir, la boîte à chaussures collée aux icônes mobiles, l'encart de statistiques débordant de son cadre, le panneau de tailles sans fond, et les décalages de titre ci-dessus. Aucun de ces défauts n'était visible dans le code.
 
 Les mesures sont faites **numériquement** plutôt qu'à l'œil : position des titres au pixel, largeur de défilement comparée à la largeur visible, totaux du panier recalculés après chaque action, styles calculés lus dans le navigateur. C'est ce qui a permis d'affirmer que les titres des cinq pages internes sont alignés au pixel près, et pas seulement qu'ils en ont l'air.
+
+## 8. Le backend
+
+Cinq décisions et deux pièges qui ne se devinent pas à la lecture du code.
+
+**Le hachage est bcrypt, pas Argon2id.** Argon2id est meilleur et disponible sur la machine de développement. Mais beaucoup de mutualisés compilent PHP sans sodium : un hachage écrit ici et illisible là-bas ferait échouer `password_verify` pour **tous les comptes**, sans message exploitable. La portabilité l'emporte sur la force de l'algorithme quand l'alternative est d'enfermer la clientèle dehors.
+
+**Les colonnes indexées sont en `VARCHAR(191)`.** En utf8mb4 chaque caractère peut occuper 4 octets : un index sur 255 caractères pèse 1020 octets et dépasse la limite de 767 de certaines configurations InnoDB anciennes. 191 × 4 = 764, juste en dessous. C'est la raison — souvent recopiée sans être comprise — du 191 qu'on croise partout.
+
+**Pas de sessions natives PHP.** Sur un mutualisé, leurs fichiers atterrissent souvent dans un répertoire temporaire partagé entre comptes, et `session.save_path` n'est pas toujours modifiable. Un jeton en base couvre la session ordinaire *et* le « se souvenir de moi » — seule la durée diffère — et se révoque réellement côté serveur. Ni une session PHP ni un JWT ne se reprennent une fois émis.
+
+**L'autoloader est écrit à la main.** Huit lignes de PSR-4. S'appuyer sur celui de Composer aurait annulé la promesse de « zéro dépendance en production », puisqu'il vit dans `vendor/`.
+
+**Le téléphone est stocké deux fois.** Forme canonique pour l'unicité, forme saisie pour l'affichage. Sans cette séparation, `+229 01 97 00 00 00` et `0197000000` ouvrent deux comptes pour la même personne, dont les commandes se répartissent ensuite entre deux dossiers.
+
+### Deux pièges rencontrés
+
+**`TRUNCATE` est 426 fois plus lent que `DELETE`.** Mesuré sur les quatre tables du schéma, vides : 4 260 ms contre 10 ms. Sur InnoDB, `TRUNCATE` supprime et recrée le fichier de tablespace, donc il touche le disque là où `DELETE` ne fait rien. La suite de tests, qui repart d'une base vide à chaque test, est passée de 31 s à 1,6 s. Ce n'est pas un détail de confort : une suite lente cesse d'être lancée.
+
+**Un cookie posé n'est pas relisible dans la même requête.** Le pot de cookies séparait l'entrant du sortant, ce qui paraît propre. Résultat : le contrôleur d'inscription ouvrait la session puis demandait « qui est connecté ? » et obtenait `null`, parce qu'il interrogeait les cookies reçus et non ceux qu'il venait d'écrire. La réponse renvoyait un client vide. Quatre tests l'ont attrapé d'un coup ; aucune relecture du code ne l'aurait montré.
+
+### Ce que les tests protègent en priorité
+
+Les assertions qui comptent le plus ne portent pas sur le chemin heureux.
+
+Un compte inconnu et un mot de passe faux doivent donner la **même réponse au caractère près** — le test compare les deux charges utiles entre elles plutôt qu'à une valeur attendue. Sinon le formulaire de connexion devient un annuaire permettant de vérifier qui est client.
+
+Le même numéro écrit autrement doit être reconnu comme déjà pris : c'est ce test qui justifie toute la normalisation.
+
+Et une panne du service d'envoi ne doit pas empêcher une inscription d'aboutir. Le test simule un Brevo indisponible et exige quand même un 201 : sinon une panne chez un tiers fermerait la boutique aux nouveaux clients.
