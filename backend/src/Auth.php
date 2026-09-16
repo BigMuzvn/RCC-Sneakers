@@ -81,6 +81,27 @@ class Auth
         Database::run('DELETE FROM auth_tokens WHERE customer_id = ?', [$customerId]);
     }
 
+    /**
+     * Coupe les autres appareils mais épargne celui-ci. Utilisé au changement
+     * de mot de passe : être déconnecté juste après avoir validé son propre
+     * formulaire serait incompréhensible pour le client.
+     */
+    public function revokeOtherSessions(int $customerId): void
+    {
+        $parts = $this->parseCookie();
+
+        if ($parts === null) {
+            self::revokeAll($customerId);
+
+            return;
+        }
+
+        Database::run(
+            'DELETE FROM auth_tokens WHERE customer_id = ? AND selector <> ?',
+            [$customerId, $parts[0]]
+        );
+    }
+
     public function id(): ?int
     {
         $customer = $this->customer();

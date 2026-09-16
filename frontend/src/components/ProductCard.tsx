@@ -3,6 +3,7 @@ import type { Product } from '../data/products';
 import { formatXof } from '../utils/format';
 import { useCart } from '../context/cart-context';
 import QuickAdd from './QuickAdd';
+import FavoriteButton from './FavoriteButton';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
@@ -19,6 +20,8 @@ export default function ProductCard({ product }: { product: Product }) {
         className="absolute inset-0 z-10"
         aria-label={`${product.brand} ${product.model} — ${product.colorway}`}
       />
+
+      <FavoriteButton type="sneaker" id={product.id} label={`${product.brand} ${product.model}`} />
 
       <div className="relative aspect-[4/3] overflow-hidden">
         <div

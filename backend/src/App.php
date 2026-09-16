@@ -3,6 +3,7 @@
 namespace Rcc;
 
 use Rcc\Controllers\AuthController;
+use Rcc\Controllers\FavoritesController;
 use Rcc\Mailer\BrevoMailer;
 use Rcc\Mailer\LogMailer;
 use Rcc\Mailer\Mailer;
@@ -35,6 +36,12 @@ class App
         $router->add('POST', '/auth/resend-verification', fn (Request $r) => $controller->resendVerification($r));
         $router->add('POST', '/auth/forgot-password', fn (Request $r) => $controller->forgotPassword($r));
         $router->add('POST', '/auth/reset-password', fn (Request $r) => $controller->resetPassword($r));
+        $router->add('POST', '/auth/profile', fn (Request $r) => $controller->updateProfile($r));
+        $router->add('POST', '/auth/password', fn (Request $r) => $controller->updatePassword($r));
+
+        $favorites = new FavoritesController($auth);
+        $router->add('GET', '/favorites', fn (Request $r) => $favorites->index($r));
+        $router->add('POST', '/favorites/toggle', fn (Request $r) => $favorites->toggle($r));
 
         $response = $router->dispatch($request);
 

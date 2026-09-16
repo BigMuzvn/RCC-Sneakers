@@ -1,12 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2, UserPlus, X } from 'lucide-react';
 import { useCart } from '../context/cart-context';
+import { useAuth } from '../context/auth-context';
 import { formatXof } from '../utils/format';
 
 export default function CartDrawer() {
   const { lines, count, subtotal, isOpen, closeCart, setQty, remove } = useCart();
+  const { customer } = useAuth();
   const navigate = useNavigate();
+  const [askAccount, setAskAccount] = useState(false);
+
+  // Le panier qui se ferme emporte la question avec lui.
+  useEffect(() => {
+    if (!isOpen) setAskAccount(false);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -171,6 +179,15 @@ export default function CartDrawer() {
               <button
                 type="button"
                 onClick={() => {
+                  // Sans compte, on demande avant d'emmener ailleurs. Une
+                  // redirection sèche au moment de payer se lit comme un mur :
+                  // le client ne comprend pas ce qui vient de se passer et
+                  // craint d'avoir perdu son panier.
+                  if (!customer) {
+                    setAskAccount(true);
+                    return;
+                  }
+
                   closeCart();
                   navigate('/checkout');
                 }}
@@ -191,6 +208,68 @@ export default function CartDrawer() {
           </>
         )}
       </aside>
+
+      {/* z-[80] : au-dessus du tiroir (z-[70]), sinon la question s'ouvrirait
+          derrière le panier dont elle vient. */}
+      {askAccount && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="titre-compte-requis"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          onClick={() => setAskAccount(false)}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-sm animate-slide-in border border-white/15 bg-[#0B0C0E] p-6 motion-reduce:animate-none sm:p-7"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C]">
+              <UserPlus className="h-5 w-5" strokeWidth={2.2} />
+            </span>
+
+            <p id="titre-compte-requis" className="mt-4 text-sm font-bold uppercase tracking-[0.12em] text-[#EDEFF2]">
+              Un compte est nécessaire
+            </p>
+            <p className="mt-2 text-[11px] leading-[1.7] text-white/60">
+              Pour valider une commande et en suivre la livraison, il faut un compte RCC. Cela prend moins d'une
+              minute.
+            </p>
+            {/* La crainte immédiate au moment de quitter cette page, c'est de
+                perdre son panier. On y répond avant qu'elle ne soit formulée. */}
+            <p className="mt-2 text-[11px] leading-[1.7] text-white/45">
+              Votre panier de {count} article{count > 1 ? 's' : ''} est conservé.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                closeCart();
+                navigate('/compte?mode=inscription&retour=commande&suite=/checkout');
+              }}
+              className="mt-6 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90"
+            >
+              Créer mon compte
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeCart();
+                navigate('/compte?retour=commande&suite=/checkout');
+              }}
+              className="mt-2 w-full border border-white/25 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-white"
+            >
+              J'ai déjà un compte
+            </button>
+            <button
+              type="button"
+              onClick={() => setAskAccount(false)}
+              className="mt-2 w-full px-6 py-2 text-[10px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white"
+            >
+              Plus tard
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

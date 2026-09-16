@@ -6,6 +6,7 @@ import Footer from './Footer';
 import HangingShoe from './HangingShoe';
 import hangingDunk from '../assets/hanging-dunk-russet.png';
 import { useCart } from '../context/cart-context';
+import { useAuth } from '../context/auth-context';
 import { formatXof } from '../utils/format';
 
 const PAGE_GRADIENT =
@@ -34,6 +35,7 @@ const labelClass = 'text-[10px] font-bold uppercase tracking-[0.16em] text-white
 
 export default function Checkout() {
   const { lines, subtotal, clear, remove } = useCart();
+  const { customer, loading } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<(typeof ZONES)[number]['id']>('cotonou');
   const [payment, setPayment] = useState<(typeof PAYMENTS)[number]['id']>('online');
@@ -42,6 +44,15 @@ export default function Checkout() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Le tiroir du panier pose la question avant d'arriver ici, mais cette adresse
+  // reste atteignable directement — par un signet, ou après expiration de la
+  // session. La garde doit donc exister des deux côtés.
+  useEffect(() => {
+    if (!loading && !customer) {
+      navigate('/compte?retour=commande&suite=/checkout', { replace: true });
+    }
+  }, [loading, customer, navigate]);
 
   const fee = ZONES.find((item) => item.id === zone)?.fee ?? 0;
   const total = subtotal + fee;
@@ -126,17 +137,20 @@ export default function Checkout() {
               <section>
                 <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#EDEFF2]">1. Vos coordonnées</h2>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {/* Préremplis depuis le compte — on ne redemande pas ce qu'on
+                      sait déjà. Les champs restent modifiables : la commande
+                      peut être livrée à quelqu'un d'autre. */}
                   <label className="flex flex-col gap-2">
                     <span className={labelClass}>Nom complet</span>
-                    <input required name="name" autoComplete="name" placeholder="Votre nom" className={inputClass} />
+                    <input required name="name" defaultValue={customer?.name ?? ''} autoComplete="name" placeholder="Votre nom" className={inputClass} />
                   </label>
                   <label className="flex flex-col gap-2">
                     <span className={labelClass}>Téléphone</span>
-                    <input required name="phone" type="tel" autoComplete="tel" placeholder="+229 ..." className={inputClass} />
+                    <input required name="phone" type="tel" defaultValue={customer?.phone ?? ''} autoComplete="tel" placeholder="+229 ..." className={inputClass} />
                   </label>
                   <label className="flex flex-col gap-2 sm:col-span-2">
                     <span className={labelClass}>E-mail</span>
-                    <input required name="email" type="email" autoComplete="email" placeholder="vous@exemple.com" className={inputClass} />
+                    <input required name="email" type="email" defaultValue={customer?.email ?? ''} autoComplete="email" placeholder="vous@exemple.com" className={inputClass} />
                   </label>
                 </div>
               </section>

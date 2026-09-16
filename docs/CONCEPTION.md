@@ -119,3 +119,39 @@ Un compte inconnu et un mot de passe faux doivent donner la **même réponse au 
 Le même numéro écrit autrement doit être reconnu comme déjà pris : c'est ce test qui justifie toute la normalisation.
 
 Et une panne du service d'envoi ne doit pas empêcher une inscription d'aboutir. Le test simule un Brevo indisponible et exige quand même un 201 : sinon une panne chez un tiers fermerait la boutique aux nouveaux clients.
+
+## 9. L'espace client
+
+### Où placer le mur
+
+Un site marchand doit décider ce qu'il refuse à un visiteur sans compte. La réponse retenue tient en une phrase : **rien, sauf payer**.
+
+Parcourir, remplir un panier, changer d'avis — tout reste libre. C'est au moment de valider que le compte devient nécessaire, parce que c'est là qu'il sert réellement à quelque chose : une adresse de livraison, un suivi, une facture.
+
+Le compte non vérifié n'est pas un second mur. Beaucoup de clients s'inscriront avec une adresse secondaire, et exiger un clic dans un e-mail peut-être classé en indésirables refoulerait de vrais acheteurs. Le bandeau de rappel énonce donc le **risque concret** — sans adresse confirmée, aucun lien de réinitialisation ne peut parvenir — plutôt qu'une injonction vague. C'est ce qui décide quelqu'un à cliquer.
+
+### Confirmer plutôt que rediriger
+
+Au clic sur « Procéder au paiement » sans compte, le tiroir ouvre une fenêtre de confirmation au lieu d'emmener directement vers l'inscription.
+
+Une redirection sèche à cet instant précis se lit comme un mur : le client ne comprend pas ce qui vient de se passer, et sa crainte immédiate est d'avoir perdu son panier. La fenêtre y répond avant même que la question soit formulée — « votre panier de N articles est conservé » — puis propose inscription ou connexion.
+
+`/checkout` porte malgré tout la même garde, car l'adresse reste atteignable par un signet ou après expiration de la session. Une protection qui n'existe qu'à un seul point d'entrée n'en est pas une.
+
+### Le halo change d'axe
+
+`SideShoe` est la variante latérale de la paire suspendue. Le visuel entre par le bord droit, donc le halo suit cet axe : dégradé radial ancré à droite, et non en haut. Garder l'ancrage supérieur ferait venir la lumière d'un endroit où il n'y a rien.
+
+Les tons sont relevés par famille de teinte plutôt qu'en fréquence brute. Le comptage simple donnait le crème à 45 %, qui remplit la chaussure sans la caractériser ; le regroupement par teinte fait ressortir le **périwinkle à 30 %** et le **bordeaux-rose à 23 %**, qui sont ce qu'on retient de la paire. Ce sont eux qui éclairent la page.
+
+### Une gouttière, pas un empilement
+
+Un visuel qui entre par la droite impose de réserver cette bande. Sans gouttière, la première version couvrait le bouton « Renvoyer le lien » et descendait jusque sur la carte des commandes.
+
+Sur téléphone, cette gouttière prendrait la moitié de l'écran. Mesuré à 390 px : la paire passait en travers du bandeau de vérification, qui devenait illisible. Elle y est donc masquée et **seul le halo demeure** — c'est lui le dispositif, pas la photographie.
+
+### Ce que les tests de parcours ont attrapé
+
+Un faux négatif instructif : `waitForURL` de Playwright rend la main dès le changement d'historique, **avant** que React ait rendu la nouvelle route. Le test voyait la bonne URL et capturait l'ancienne page, concluant à l'absence du bandeau de vérification. Attendre le titre plutôt que l'URL corrige la mesure.
+
+Le parcours qui compte le plus a été vérifié de bout en bout, jeton extrait du journal d'envoi : bandeau affiché → lien réel ouvert → adresse confirmée → bandeau disparu → même lien rejoué et refusé.

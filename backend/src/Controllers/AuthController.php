@@ -204,6 +204,98 @@ class AuthController
         ]);
     }
 
+    // ---------------------------------------------------------------- profil
+
+    public function updateProfile(Request $request): Response
+    {
+        $customer = $this->auth->customer();
+
+        if ($customer === null) {
+            return Response::unauthorized();
+        }
+
+        $v = new Validator($request->body);
+        $name = $v->text('name', 2, 120);
+        $email = $v->email('email');
+        $phone = $v->phone('phone');
+
+        if ($v->fails()) {
+            return Response::validation($v->errors());
+        }
+
+        $id = (int) $customer['id'];
+        $taken = $this->takenFields($email, $phone, exceptId: $id);
+
+        if ($taken !== []) {
+            return Response::validation($taken);
+        }
+
+        // Changer d'adresse annule la vérification. Sans cela, on pourrait
+        // inscrire une adresse qu'on contrôle, la faire vérifier, puis la
+        // remplacer par celle d'un tiers en gardant la pastille « vérifié ».
+        $emailChanged = $email !== $customer['email'];
+
+        Database::run(
+            'UPDATE customers
+                SET name = ?, email = ?, phone = ?, phone_display = ?,
+                    email_verified_at = ?, updated_at = ?
+              WHERE id = ?',
+            [
+                $name,
+                $email,
+                $phone,
+                trim((string) $request->input('phone')),
+                $emailChanged ? null : $customer['email_verified_at'],
+                Database::now(),
+                $id,
+            ]
+        );
+
+        if ($emailChanged) {
+            $this->sendVerification($id, $name, $email);
+        }
+
+        $fresh = Database::first('SELECT * FROM customers WHERE id = ?', [$id]);
+
+        return Response::data(['customer' => Auth::publicShape($fresh)]);
+    }
+
+    public function updatePassword(Request $request): Response
+    {
+        $customer = $this->auth->customer();
+
+        if ($customer === null) {
+            return Response::unauthorized();
+        }
+
+        $v = new Validator($request->body);
+        $current = $v->password('current_password', 1);
+        $password = $v->password('password');
+
+        if ($v->fails()) {
+            return Response::validation($v->errors());
+        }
+
+        if (!password_verify($current, $customer['password_hash'])) {
+            return Response::validation([
+                'current_password' => 'Ce mot de passe ne correspond pas à votre compte.',
+            ]);
+        }
+
+        $id = (int) $customer['id'];
+
+        Database::run(
+            'UPDATE customers SET password_hash = ?, updated_at = ? WHERE id = ?',
+            [$this->hash($password), Database::now(), $id]
+        );
+
+        // Les autres appareils tombent — un mot de passe changé doit couper ce
+        // qui pourrait avoir été détourné — mais la session courante survit.
+        $this->auth->revokeOtherSessions($id);
+
+        return Response::data(['message' => 'Votre mot de passe a été modifié.']);
+    }
+
     // ------------------------------------------------------------ mot de passe
 
     public function forgotPassword(Request $request): Response
@@ -289,16 +381,23 @@ class AuthController
 
     // ------------------------------------------------------------------- privé
 
-    /** @return array<string,string> */
-    private function takenFields(string $email, string $phone): array
+    /**
+     * @param int|null $exceptId compte à ignorer — sinon un client qui modifie
+     *                           son profil sans changer de numéro se verrait
+     *                           reprocher son propre numéro comme un doublon.
+     * @return array<string,string>
+     */
+    private function takenFields(string $email, string $phone, ?int $exceptId = null): array
     {
         $fields = [];
+        $guard = $exceptId === null ? '' : ' AND id <> ?';
+        $extra = $exceptId === null ? [] : [$exceptId];
 
-        if (Database::first('SELECT id FROM customers WHERE email = ?', [$email]) !== null) {
+        if (Database::first("SELECT id FROM customers WHERE email = ?{$guard}", [$email, ...$extra]) !== null) {
             $fields['email'] = 'Cette adresse e-mail est déjà utilisée.';
         }
 
-        if (Database::first('SELECT id FROM customers WHERE phone = ?', [$phone]) !== null) {
+        if (Database::first("SELECT id FROM customers WHERE phone = ?{$guard}", [$phone, ...$extra]) !== null) {
             $fields['phone'] = 'Ce numéro de téléphone est déjà utilisé.';
         }
 

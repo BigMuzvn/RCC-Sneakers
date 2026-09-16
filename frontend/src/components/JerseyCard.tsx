@@ -2,6 +2,7 @@ import type { Jersey } from '../data/jerseys';
 import { formatXof } from '../utils/format';
 import { useCart } from '../context/cart-context';
 import QuickAdd from './QuickAdd';
+import FavoriteButton from './FavoriteButton';
 
 export default function JerseyCard({ jersey }: { jersey: Jersey }) {
   const { add } = useCart();
@@ -12,6 +13,8 @@ export default function JerseyCard({ jersey }: { jersey: Jersey }) {
 
   return (
     <article className="group relative flex flex-col overflow-hidden border border-white/10 bg-white/[0.02] transition-colors duration-300 hover:border-white/25 hover:bg-white/[0.04]">
+      <FavoriteButton type="jersey" id={jersey.id} label={`${jersey.club} ${jersey.kit}`} />
+
       <div className="relative aspect-[4/3] overflow-hidden">
         <div
           aria-hidden="true"

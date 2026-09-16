@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { ApiFailure } from '../api/client';
+import { useAuth } from '../context/auth-context';
 import visuelConnexion from '../assets/auth-connexion.png';
 import visuelInscription from '../assets/auth-inscription.png';
 
@@ -38,16 +39,77 @@ const inputClass =
 
 const labelClass = 'text-[10px] font-bold uppercase tracking-[0.16em] text-white/60';
 
+/** Raisons d'arrivée sur cette page, pour expliquer pourquoi on y a été conduit. */
+const REASONS: Record<string, string> = {
+  favori: 'Vos favoris sont rattachés à votre compte. Connectez-vous pour les retrouver partout.',
+  commande: 'Un compte est nécessaire pour valider une commande. Votre panier est conservé.',
+};
+
 export default function Compte() {
-  const [mode, setMode] = useState<Mode>('connexion');
-  const [done, setDone] = useState(false);
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { customer, loading, register, login } = useAuth();
+
+  const [mode, setMode] = useState<Mode>(params.get('mode') === 'inscription' ? 'inscription' : 'connexion');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
   const current = MODES[mode];
   const isConnexion = mode === 'connexion';
+  const reason = REASONS[params.get('retour') ?? ''];
+  const next = params.get('suite');
 
-  const switchTo = (next: Mode) => {
-    if (next === mode) return;
-    setMode(next);
-    setDone(false);
+  // Déjà connecté : cette page n'a plus de raison d'être affichée.
+  useEffect(() => {
+    if (!loading && customer) navigate(next ?? '/espace-client', { replace: true });
+  }, [loading, customer, navigate, next]);
+
+  const switchTo = (nextMode: Mode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setErrors({});
+    setNotice('');
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrors({});
+    setNotice('');
+    setSubmitting(true);
+
+    const data = new FormData(event.currentTarget);
+
+    try {
+      if (isConnexion) {
+        await login(
+          String(data.get('identifier') ?? ''),
+          String(data.get('password') ?? ''),
+          data.get('remember') === 'on',
+        );
+      } else {
+        await register({
+          name: String(data.get('name') ?? ''),
+          email: String(data.get('email') ?? ''),
+          phone: String(data.get('phone') ?? ''),
+          password: String(data.get('password') ?? ''),
+          terms: data.get('terms') === 'on',
+        });
+      }
+
+      navigate(next ?? '/espace-client', { replace: true });
+    } catch (error) {
+      setSubmitting(false);
+
+      if (error instanceof ApiFailure) {
+        setErrors(error.fields);
+        // Une erreur sans champ associé — identifiants refusés, trop de
+        // tentatives, réseau coupé — doit quand même s'afficher quelque part.
+        if (Object.keys(error.fields).length === 0) setNotice(error.message);
+      } else {
+        setNotice('Une erreur est survenue. Réessayez dans un instant.');
+      }
+    }
   };
 
   return (
@@ -177,76 +239,58 @@ export default function Compte() {
             </div>
 
             {/* ---------- FIELDS ---------- */}
-            {done ? (
-              <div className="mt-7 flex flex-col items-start border border-white/15 bg-white/[0.03] px-6 py-10">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C]">
-                  <Check className="h-5 w-5" strokeWidth={2.5} />
-                </span>
-                <p className="mt-4 text-sm font-bold uppercase tracking-[0.12em] text-[#EDEFF2]">
-                  {isConnexion ? 'Connexion réussie' : 'Compte créé'}
-                </p>
-                <p className="mt-2 text-[11px] leading-[1.7] text-white/55">
-                  {isConnexion
-                    ? 'Bon retour parmi nous. Vos commandes vous attendent.'
-                    : 'Bienvenue chez RCC. Vous pouvez dès maintenant commander.'}
-                </p>
-                <Link
-                  to="/boutique"
-                  className="mt-6 border border-white px-6 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white hover:text-[#141516]"
-                >
-                  Aller à la boutique
-                </Link>
-              </div>
-            ) : (
-              <form
-                key={mode}
-                className="mt-7 flex animate-slide-in flex-col gap-4 motion-reduce:animate-none"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  // TODO: POST /api/auth/{login,register} — no session is created yet
-                  setDone(true);
-                }}
-              >
-                {!isConnexion && (
-                  <label className="flex flex-col gap-2">
-                    <span className={labelClass}>Nom complet</span>
-                    <input required type="text" name="name" autoComplete="name" placeholder="Votre nom" className={inputClass} />
-                  </label>
-                )}
+            {reason && (
+              <p className="mt-6 border border-white/15 bg-white/[0.04] px-4 py-3 text-[11px] leading-[1.6] text-white/70">
+                {reason}
+              </p>
+            )}
 
-                <label className="flex flex-col gap-2">
-                  <span className={labelClass}>{isConnexion ? 'E-mail ou téléphone' : 'E-mail'}</span>
-                  <input
-                    required
-                    type={isConnexion ? 'text' : 'email'}
-                    name={isConnexion ? 'identifier' : 'email'}
-                    autoComplete={isConnexion ? 'username' : 'email'}
-                    placeholder={isConnexion ? 'vous@exemple.com' : 'vous@exemple.com'}
-                    className={inputClass}
-                  />
-                </label>
+            <form
+              key={mode}
+              className="mt-7 flex animate-slide-in flex-col gap-4 motion-reduce:animate-none"
+              onSubmit={handleSubmit}
+            >
+              {!isConnexion && (
+                <Field
+                  label="Nom complet"
+                  name="name"
+                  autoComplete="name"
+                  placeholder="Votre nom"
+                  error={errors.name}
+                />
+              )}
 
-                {!isConnexion && (
-                  <label className="flex flex-col gap-2">
-                    <span className={labelClass}>Téléphone</span>
-                    <input required type="tel" name="phone" autoComplete="tel" placeholder="+229 ..." className={inputClass} />
-                  </label>
-                )}
+              <Field
+                label={isConnexion ? 'E-mail ou téléphone' : 'E-mail'}
+                name={isConnexion ? 'identifier' : 'email'}
+                type={isConnexion ? 'text' : 'email'}
+                autoComplete={isConnexion ? 'username' : 'email'}
+                placeholder="vous@exemple.com"
+                error={errors.identifier ?? errors.email}
+              />
 
-                <label className="flex flex-col gap-2">
-                  <span className={labelClass}>Mot de passe</span>
-                  <input
-                    required
-                    minLength={8}
-                    type="password"
-                    name="password"
-                    autoComplete={isConnexion ? 'current-password' : 'new-password'}
-                    placeholder={isConnexion ? 'Votre mot de passe' : '8 caractères minimum'}
-                    className={inputClass}
-                  />
-                </label>
+              {!isConnexion && (
+                <Field
+                  label="Téléphone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="+229 01 97 ..."
+                  error={errors.phone}
+                />
+              )}
 
-                {!isConnexion && (
+              <Field
+                label="Mot de passe"
+                name="password"
+                type="password"
+                autoComplete={isConnexion ? 'current-password' : 'new-password'}
+                placeholder={isConnexion ? 'Votre mot de passe' : '8 caractères minimum'}
+                error={errors.password}
+              />
+
+              {!isConnexion && (
+                <>
                   <label className="flex items-start gap-2.5">
                     <input required type="checkbox" name="terms" className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#EDEFF2]" />
                     <span className="text-[10px] leading-[1.6] text-white/55">
@@ -261,44 +305,95 @@ export default function Compte() {
                       .
                     </span>
                   </label>
-                )}
+                  {errors.terms && <span className="-mt-2 text-[10px] text-[#E2564A]">{errors.terms}</span>}
+                </>
+              )}
 
-                {isConnexion && (
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="flex items-center gap-2.5">
-                      <input type="checkbox" name="remember" className="h-3.5 w-3.5 shrink-0 accent-[#EDEFF2]" />
-                      <span className="text-[10px] uppercase tracking-[0.12em] text-white/55">Se souvenir de moi</span>
-                    </label>
-                    <a href="#" className="text-[10px] uppercase tracking-[0.12em] text-white/55 transition-colors hover:text-white">
-                      Mot de passe oublié ?
-                    </a>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="mt-1 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 sm:tracking-[0.14em]"
-                >
-                  {isConnexion ? 'Se connecter' : 'Créer mon compte'}
-                </button>
-
-                <p className="text-[10px] leading-[1.6] text-white/40">
-                  {isConnexion ? 'Pas encore de compte ?' : 'Vous avez déjà un compte ?'}{' '}
-                  <button
-                    type="button"
-                    onClick={() => switchTo(isConnexion ? 'inscription' : 'connexion')}
-                    className="font-bold uppercase tracking-[0.1em] text-white/75 underline underline-offset-2 transition-colors hover:text-white"
+              {isConnexion && (
+                <div className="flex items-center justify-between gap-3">
+                  <label className="flex items-center gap-2.5">
+                    <input type="checkbox" name="remember" className="h-3.5 w-3.5 shrink-0 accent-[#EDEFF2]" />
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/55">Se souvenir de moi</span>
+                  </label>
+                  <Link
+                    to="/compte/mot-de-passe-oublie"
+                    className="text-[10px] uppercase tracking-[0.12em] text-white/55 transition-colors hover:text-white"
                   >
-                    {isConnexion ? 'Créer un compte' : 'Se connecter'}
-                  </button>
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+              )}
+
+              {/* Erreur générale : identifiants refusés, trop de tentatives,
+                  réseau coupé — rien de tout cela ne vise un champ précis. */}
+              {notice && (
+                <p className="border border-[#E2564A]/40 bg-[#E2564A]/[0.08] px-4 py-3 text-[11px] leading-[1.6] text-[#F2A79E]">
+                  {notice}
                 </p>
-              </form>
-            )}
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="mt-1 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 disabled:opacity-55 sm:tracking-[0.14em]"
+              >
+                {submitting
+                  ? isConnexion
+                    ? 'Connexion…'
+                    : 'Création…'
+                  : isConnexion
+                    ? 'Se connecter'
+                    : 'Créer mon compte'}
+              </button>
+
+              <p className="text-[10px] leading-[1.6] text-white/40">
+                {isConnexion ? 'Pas encore de compte ?' : 'Vous avez déjà un compte ?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => switchTo(isConnexion ? 'inscription' : 'connexion')}
+                  className="font-bold uppercase tracking-[0.1em] text-white/75 underline underline-offset-2 transition-colors hover:text-white"
+                >
+                  {isConnexion ? 'Créer un compte' : 'Se connecter'}
+                </button>
+              </p>
+            </form>
           </div>
         </div>
       </div>
 
       <Footer />
     </div>
+  );
+}
+
+type FieldProps = {
+  label: string;
+  name: string;
+  error?: string;
+  type?: string;
+  placeholder?: string;
+  autoComplete?: string;
+};
+
+/**
+ * Champ de formulaire non contrôlé — la valeur est lue par FormData à l'envoi.
+ * L'erreur vient du serveur : c'est lui qui détient les règles, et les
+ * dupliquer côté navigateur garantirait qu'elles divergent un jour.
+ */
+function Field({ label, name, error, type = 'text', placeholder, autoComplete }: FieldProps) {
+  return (
+    <label className="flex flex-col gap-2">
+      <span className={labelClass}>{label}</span>
+      <input
+        required
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        aria-invalid={error ? true : undefined}
+        className={`${inputClass} ${error ? 'border-[#E2564A]/70' : ''}`}
+      />
+      {error && <span className="text-[10px] leading-[1.5] text-[#E2564A]">{error}</span>}
+    </label>
   );
 }

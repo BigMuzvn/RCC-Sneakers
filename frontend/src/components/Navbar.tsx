@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import rccLogo from '../assets/rcc-logo.png';
 import { useCart } from '../context/cart-context';
+import { useAuth } from '../context/auth-context';
 
 const NAV_LINKS = [
   { label: 'Accueil', to: '/' },
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { count, openCart } = useCart();
+  const { customer } = useAuth();
 
   return (
     <>
@@ -57,12 +59,23 @@ export default function Navbar() {
               </span>
             )}
           </button>
+          {/* Connecté, l'icône mène à l'espace client : renvoyer quelqu'un vers
+              un formulaire de connexion qu'il a déjà rempli n'a pas de sens. */}
           <Link
-            to="/compte"
-            aria-label="Mon compte"
-            className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C] transition-opacity hover:opacity-80"
+            to={customer ? '/espace-client' : '/compte'}
+            aria-label={customer ? 'Mon espace client' : 'Mon compte'}
+            className={`relative flex h-6 w-6 items-center justify-center rounded-full transition-opacity hover:opacity-80 ${
+              customer ? 'bg-[#EDEFF2] text-[#17191C]' : 'bg-[#EDEFF2] text-[#17191C]'
+            }`}
           >
             <User className="h-3.5 w-3.5" strokeWidth={2.4} />
+            {/* Pastille de rappel : l'adresse n'est pas vérifiée. */}
+            {customer && !customer.email_verified && (
+              <span
+                aria-hidden="true"
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[#0B0C0E] bg-[#E2B04A]"
+              />
+            )}
           </Link>
           <button
             type="button"
