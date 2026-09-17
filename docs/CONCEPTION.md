@@ -203,3 +203,33 @@ Elle est maintenant générée par le serveur, au format `RCC-AAMMJJ-XXXX` : la 
 ### Ce qu'une fausse piste a coûté
 
 En vérifiant une mesure, un contrôle a été lancé quatre secondes après un envoi d'e-mail. L'index de Brevo accuse quelques dizaines de secondes de retard : la conclusion « l'envoi a échoué » était fausse. La leçon vaut au-delà de Brevo — **un service distant qui répond « pas encore » ne dit pas « jamais »**, et une vérification trop rapprochée fabrique des pannes imaginaires.
+
+## 11. L'accueil cesse d'être une vitrine peinte
+
+Le carrousel affichait quatre paires avec des prix en dollars et deux boutons inertes. Le constat qui a déclenché la reprise : **ce sont de vrais produits, pas un décor**. Les quatre modèles existent en boutique ; quelqu'un qui clique « Ajouter au panier » depuis l'accueil s'attend légitimement à ce que ça marche.
+
+Chaque slide est donc désigné par un **slug** et rien d'autre. Prix, coloris, description, stock et image viennent du catalogue. Il n'y a plus une seule donnée recopiée dans `Hero.tsx` — c'est ce qui permettra de gérer la vitrine depuis l'administration sans toucher au code.
+
+### Le mensonge des pastilles de coloris
+
+Chaque slide proposait trois pastilles de couleur. Le catalogue, lui, ne contient **qu'un seul coloris par modèle**. Choisir « Argent métallisé » sur la Shox TL n'aurait rien changé au produit ajouté : on aurait reçu la noire.
+
+C'est le genre de détail qui ne se voit pas tant que personne n'achète, puis qui devient un litige. La rangée affiche maintenant les coloris réels du modèle : avec un seul, elle annonce lequel plutôt que de simuler un choix ; avec plusieurs, elle redevient un sélecteur qui change réellement l'article. Le dispositif visuel est conservé, la fiction est retirée.
+
+### Suspendre le défilement pendant le choix
+
+L'accueil avance d'un slide toutes les cinq secondes. Ouvrir un panneau de tailles sans arrêter ce minuteur, c'est offrir au client de voir la paire changer sous son doigt au moment précis où il choisit — et d'ajouter au panier autre chose que ce qu'il visait.
+
+Le minuteur est donc suspendu tant que le panneau est ouvert, et le panneau se referme si le slide change par ailleurs : il appartenait à la paire précédente.
+
+### Pourquoi un panneau et pas une rangée
+
+L'accueil tient en un écran sans défilement (`100svh`). Insérer une rangée de sept tailles dans la barre basse la ferait déborder sur les hauteurs contraintes — un portable en paysage, un netbook. Le panneau s'ouvre donc **au-dessus** des boutons, en superposition, sans rien pousser.
+
+### La fiche maillot
+
+Douze cartes ne menaient nulle part. C'était le trou le plus visible du site : un visiteur clique une carte avant de lire quoi que ce soit.
+
+La fiche reprend la structure de la fiche sneaker, adaptée aux données réelles des maillots : championnat, équipementier, saison, tailles S à XXL. Aucun maillot n'ayant encore de rendu, le **nom du club en filigrane** remplace l'image — une zone vide se lirait comme une image cassée, un nom de club en très grand se lit comme un parti pris.
+
+Deux mesures ont ajusté ce filigrane. « FC Barcelone » occupait 657 px dans une boîte de 659 et collait aux deux bords ; la taille a été réduite jusqu'à laisser une marge. Et « Visuel à venir », posé au centre, se superposait au nom : il est descendu en bas de cadre.

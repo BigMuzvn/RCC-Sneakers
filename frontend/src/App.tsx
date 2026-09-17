@@ -5,6 +5,7 @@ import ProductDetail from './components/ProductDetail';
 import Contact from './components/Contact';
 import Soldes from './components/Soldes';
 import Maillots from './components/Maillots';
+import JerseyDetail from './components/JerseyDetail';
 import Compte from './components/Compte';
 import EspaceClient from './components/EspaceClient';
 import VerifierEmail from './components/VerifierEmail';
@@ -31,6 +32,7 @@ function App() {
               <Route path="/boutique" element={<Boutique />} />
               <Route path="/boutique/:slug" element={<ProductDetail />} />
               <Route path="/maillots" element={<Maillots />} />
+              <Route path="/maillots/:slug" element={<JerseyDetail />} />
               <Route path="/soldes" element={<Soldes />} />
               <Route path="/contact" element={<Contact />} />
 

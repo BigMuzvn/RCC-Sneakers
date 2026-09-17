@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Jersey } from '../data/jerseys';
 import { formatXof } from '../utils/format';
 import { useCart } from '../context/cart-context';
@@ -13,6 +14,14 @@ export default function JerseyCard({ jersey }: { jersey: Jersey }) {
 
   return (
     <article className="group relative flex flex-col overflow-hidden border border-white/10 bg-white/[0.02] transition-colors duration-300 hover:border-white/25 hover:bg-white/[0.04]">
+      {/* Lien étiré et non englobant : un <button> dans un <a> est du HTML
+          invalide, et la carte porte un bouton d'ajout rapide et un cœur. */}
+      <Link
+        to={`/maillots/${jersey.slug}`}
+        className="absolute inset-0 z-10"
+        aria-label={`Maillot ${jersey.club} ${jersey.kit} ${jersey.season}`}
+      />
+
       <FavoriteButton type="jersey" id={jersey.id} label={`${jersey.club} ${jersey.kit}`} />
 
       <div className="relative aspect-[4/3] overflow-hidden">

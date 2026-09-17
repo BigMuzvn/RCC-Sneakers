@@ -43,10 +43,11 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 
 | Route | Contenu |
 |---|---|
-| `/` | Accueil — carrousel plein écran, 4 paires, défilement auto 5 s |
+| `/` | Accueil — carrousel plein écran, 4 paires du catalogue, achat direct, défilement auto 5 s |
 | `/boutique` | Catalogue 20 sneakers, filtres marque et catégorie |
 | `/boutique/:slug` | Fiche produit — tailles, stock, suggestions |
 | `/maillots` | 12 maillots de clubs et sélections, filtre par championnat |
+| `/maillots/:slug` | Fiche maillot — tailles, stock, flocage, suggestions |
 | `/soldes` | 8 modèles en remise, 3 tris |
 | `/compte` | Connexion et inscription sur une page, avec interrupteur |
 | `/compte/verifier` | Atterrissage du lien de vérification reçu par e-mail |
@@ -134,6 +135,18 @@ Le cookie porte `sélecteur.validateur` ; la base ne garde que le sélecteur et 
 **Le serveur fait autorité sur la session, et l'interface s'y range.** Le cookie est en HttpOnly : le JavaScript ne peut pas savoir qu'il a expiré, qu'il a été révoqué depuis un autre appareil, ou que le serveur a été redéployé. Le seul signal est un 401 sur un appel qui n'aurait pas dû en produire — `src/api/client.ts` le remonte alors au contexte, qui vide l'état et laisse les pages protégées renvoyer vers la connexion. Sans cela, l'application affiche un client connecté et l'erreur surgit au pire endroit : au moment de confirmer une commande.
 
 **`--fresh` est refusé sur la base de travail** sans `--force`. Il supprime toutes les tables, comptes et commandes compris — y compris ceux de quelqu'un dont l'onglet est resté ouvert. Sur la base de test, c'est le comportement attendu et le garde ne s'applique pas.
+
+## L'accueil n'est pas un décor
+
+Les quatre paires du carrousel **sont** des produits du catalogue, désignés par leur slug. Prix, coloris, texte et stock viennent de la même source que la boutique : acheter depuis l'accueil ajoute exactement l'article affiché, et le nom du modèle mène à sa fiche.
+
+Les prix étaient en dollars et les boutons inertes. Ils sont en F CFA, et « Ajouter au panier » ouvre un panneau de tailles alimenté par le stock réel — les tailles épuisées sont barrées. « Acheter » fait la même chose puis mène au paiement.
+
+**Les pastilles de coloris ne mentent plus.** Il y en avait trois par paire alors que chaque modèle n'existe qu'en un seul coloris au catalogue : choisir « Argent métallisé » sur la Shox TL aurait ajouté la noire. La rangée affiche désormais les coloris réels du modèle. Avec un seul, elle annonce lequel ; dès qu'un second entrera au catalogue, elle redeviendra un vrai sélecteur et changera le produit ajouté.
+
+Le défilement automatique **se suspend** pendant le choix d'une taille : voir le slide changer sous son doigt au moment d'acheter est la meilleure façon d'ajouter au panier autre chose que ce qu'on visait.
+
+La liste des quatre slugs et les fonds peints à la main vivent dans `Hero.tsx`. Ils passeront en base à la partie administration — c'est pourquoi la liste ne contient que des slugs et rien de recopié.
 
 ## Commandes
 
@@ -243,9 +256,10 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 2. ~~**Pages client**~~ — faites. Espace client à trois volets, pages des liens e-mail, favoris, verrou avant paiement.
 3. ~~**Commandes**~~ — faites. Catalogue en base, stock réel, lignes figées.
 4. **Agrégateur de paiement** — à choisir (KkiaPay, FedaPay, CinetPay sont les candidats béninois à comparer). Le reste du tunnel l'attend.
-5. **Front sur l'API du catalogue** — remplacer les imports de `src/data/` par des `fetch`, pour que le stock affiché cesse d'être en retard.
-6. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
-7. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
+5. **Administration** — lire et faire avancer les commandes, et reprendre la main sur le catalogue et la vitrine d'accueil. Aujourd'hui la boutique n'est prévenue d'aucune commande et aucun statut ne peut changer.
+6. **Front sur l'API du catalogue** — remplacer les imports de `src/data/` par des `fetch`, pour que le stock affiché cesse d'être en retard.
+7. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
+8. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
 
 ### Ce qui n'est pas fonctionnel
 
@@ -261,7 +275,6 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Lettre d'information | Valide et confirme, **n'enregistre rien**. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
-| Fiche maillot | Les cartes maillots ne mènent nulle part, il n'y a pas de page de détail. |
 | Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |
 | Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |
 | Tarifs de livraison | 1 000 / 1 500 / 2 500 F CFA sont des valeurs de remplacement, en haut de `Checkout.tsx`. |
