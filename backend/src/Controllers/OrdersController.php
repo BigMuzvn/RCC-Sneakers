@@ -8,6 +8,7 @@ use Rcc\Mailer\Emails;
 use Rcc\Mailer\Mailer;
 use Rcc\Request;
 use Rcc\Response;
+use Rcc\Settings;
 use Rcc\Validator;
 use Throwable;
 
@@ -162,6 +163,16 @@ class OrdersController
         // perdre une vente. L'échec est journalisé par le mailer.
         $mail = Emails::orderConfirmation($name, $order);
         $this->mailer->send($email, $name, $mail['subject'], $mail['html']);
+
+        // Et la boutique, sans quoi une commande arrive sans que personne ne le
+        // sache. Sans adresse configurée, on n'envoie rien plutôt que d'échouer :
+        // la vente compte plus que la notification.
+        $destinataire = Settings::get('shop_notification_email');
+
+        if ($destinataire !== '') {
+            $interne = Emails::orderForShop($order);
+            $this->mailer->send($destinataire, 'RCC Sneakers', $interne['subject'], $interne['html']);
+        }
 
         return Response::data(['order' => $order], 201);
     }

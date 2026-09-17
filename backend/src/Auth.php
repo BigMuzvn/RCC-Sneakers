@@ -149,6 +149,11 @@ class Auth
             'email' => $row['email'],
             'phone' => $row['phone_display'],
             'email_verified' => $row['email_verified_at'] !== null,
+            // Le front en a besoin pour afficher l'accès à l'administration.
+            // Ce n'est pas ce drapeau qui protège les routes : le serveur
+            // revérifie à chaque appel, un client qui le falsifierait dans sa
+            // mémoire ne gagnerait qu'un lien vers une page qui lui répond 403.
+            'is_admin' => (int) ($row['is_admin'] ?? 0) === 1,
             'created_at' => $row['created_at'],
         ];
     }
@@ -185,7 +190,37 @@ class Auth
             return null;
         }
 
-        return Database::first('SELECT * FROM customers WHERE id = ?', [$token['customer_id']]);
+        $customer = Database::first('SELECT * FROM customers WHERE id = ?', [$token['customer_id']]);
+
+        // Un compte suspendu ou anonymisé perd ses sessions sur-le-champ, y
+        // compris celles déjà ouvertes dans un onglet. Vérifier seulement à la
+        // connexion laisserait un compte abusif actif jusqu'à sa déconnexion.
+        if ($customer !== null && ($customer['status'] ?? 'active') !== 'active') {
+            self::revokeAll((int) $customer['id']);
+
+            return null;
+        }
+
+        return $customer;
+    }
+
+    /**
+     * Le client courant s'il est administrateur, sinon null.
+     *
+     * Le statut est revérifié ici : un administrateur suspendu n'administre
+     * plus rien.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function admin(): ?array
+    {
+        $customer = $this->customer();
+
+        if ($customer === null || (int) ($customer['is_admin'] ?? 0) !== 1) {
+            return null;
+        }
+
+        return $customer;
     }
 
     /** @return array{0:string,1:string}|null */

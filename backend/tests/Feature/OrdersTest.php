@@ -270,6 +270,42 @@ class OrdersTest extends ApiTestCase
         $this->assertSame(1, (int) Database::first('SELECT COUNT(*) c FROM orders')['c']);
     }
 
+    /**
+     * Le manque le plus coûteux qu'on puisse avoir : une commande arrive et
+     * personne à la boutique ne le sait. Un client confirmé d'un côté, un
+     * vendeur dans le noir de l'autre.
+     */
+    public function test_la_boutique_est_prevenue_de_la_commande(): void
+    {
+        \Rcc\Settings::set('shop_notification_email', 'boutique@exemple.com');
+
+        $response = $this->post('/orders', $this->commande());
+        $reference = $response->payload['data']['order']['reference'];
+
+        $destinataires = array_column($this->mailer->sent, 'to');
+
+        $this->assertContains('lemaye@exemple.com', $destinataires, 'le client doit être confirmé');
+        $this->assertContains('boutique@exemple.com', $destinataires, 'la boutique doit être prévenue');
+
+        $pourBoutique = array_values(array_filter($this->mailer->sent, fn ($m) => $m['to'] === 'boutique@exemple.com'))[0];
+        $this->assertStringContainsString($reference, $pourBoutique['html']);
+        $this->assertStringContainsString('0197000000', $pourBoutique['html'], 'le téléphone doit y figurer pour rappeler le client');
+    }
+
+    /**
+     * Sans adresse configurée, on n'envoie rien plutôt que d'échouer : la vente
+     * compte plus que la notification.
+     */
+    public function test_sans_adresse_configuree_la_commande_passe_quand_meme(): void
+    {
+        \Rcc\Settings::set('shop_notification_email', '');
+
+        $response = $this->post('/orders', $this->commande());
+
+        $this->assertSame(201, $response->status);
+        $this->assertSame(1, $this->mailer->count(), 'seul le client est confirmé');
+    }
+
     // ------------------------------------------------------------ relecture
 
     public function test_on_relit_ses_commandes(): void

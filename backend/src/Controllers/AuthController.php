@@ -127,6 +127,20 @@ class AuthController
             );
         }
 
+        // Le statut est contrôlé après le mot de passe, jamais avant : répondre
+        // « ce compte est suspendu » à qui ne connaît pas le mot de passe
+        // révélerait qu'il existe, et lequel.
+        if (($customer['status'] ?? 'active') !== 'active') {
+            $limiter->record($key, $request->ip);
+
+            return Response::error(
+                'account_suspended',
+                "Ce compte n'est plus accessible. Contactez-nous si vous pensez qu'il s'agit d'une erreur.",
+                [],
+                403
+            );
+        }
+
         $limiter->clear($key);
         $this->auth->login((int) $customer['id'], $v->flag('remember'));
 

@@ -129,6 +129,101 @@ class Emails
         ];
     }
 
+    /**
+     * Notification interne : une commande vient d'arriver.
+     *
+     * Écrite pour être lue sur un téléphone, en vitesse, entre deux clients.
+     * Le numéro du client y figure en évidence : la première chose à faire est
+     * de l'appeler pour confirmer.
+     *
+     * @param array<string,mixed> $order
+     * @return array{subject:string,html:string}
+     */
+    public static function orderForShop(array $order): array
+    {
+        $lignes = '';
+
+        foreach ($order['items'] as $item) {
+            $lignes .= sprintf(
+                '<tr><td style="padding:6px 0;border-bottom:1px solid #EDEFF2;font-size:13px;color:#17191C;">
+                   %s <span style="color:#8A9099;">— taille %s × %d</span></td>
+                 <td style="padding:6px 0;border-bottom:1px solid #EDEFF2;font-size:13px;text-align:right;white-space:nowrap;">%s</td></tr>',
+                self::escape($item['title']),
+                self::escape($item['size']),
+                (int) $item['qty'],
+                self::xof((int) $item['line_total_xof'])
+            );
+        }
+
+        return [
+            'subject' => sprintf('Nouvelle commande %s — %s', $order['reference'], self::xof((int) $order['total_xof'])),
+            'html' => self::layout(
+                title: 'Commande ' . self::escape($order['reference']),
+                body: sprintf(
+                    '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-family:Arial,sans-serif;">
+                       %s
+                       <tr><td style="padding:10px 0 0;font-size:14px;font-weight:bold;color:#17191C;">Total (livraison comprise)</td>
+                           <td style="padding:10px 0 0;font-size:14px;font-weight:bold;text-align:right;">%s</td></tr>
+                     </table>
+                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;font-size:13px;color:#3A3E45;">
+                       <tr><td style="padding:3px 0;width:110px;color:#8A9099;">Client</td><td style="padding:3px 0;">%s</td></tr>
+                       <tr><td style="padding:3px 0;color:#8A9099;">Téléphone</td><td style="padding:3px 0;"><strong>%s</strong></td></tr>
+                       <tr><td style="padding:3px 0;color:#8A9099;">E-mail</td><td style="padding:3px 0;">%s</td></tr>
+                       <tr><td style="padding:3px 0;color:#8A9099;">Livraison</td><td style="padding:3px 0;">%s — %s</td></tr>
+                       <tr><td style="padding:3px 0;color:#8A9099;">Règlement</td><td style="padding:3px 0;">%s</td></tr>
+                     </table>',
+                    $lignes,
+                    self::xof((int) $order['total_xof']),
+                    self::escape($order['contact_name']),
+                    self::escape($order['contact_phone']),
+                    self::escape($order['contact_email']),
+                    self::escape($order['delivery_label']),
+                    self::escape($order['delivery_address']),
+                    $order['payment_method'] === 'cash' ? 'Espèces à la livraison' : self::escape($order['payment_method'])
+                ),
+                buttonLabel: "Ouvrir l'administration",
+                buttonLink: rtrim((string) Config::get('app.url'), '/') . '/admin/commandes',
+                footnote: 'Appelez le client pour confirmer la disponibilité des tailles avant de préparer le colis.'
+            ),
+        ];
+    }
+
+    /**
+     * Notification interne : un message du formulaire de contact.
+     *
+     * @param array<string,mixed> $message
+     * @return array{subject:string,html:string}
+     */
+    public static function contactMessage(array $message): array
+    {
+        $telephone = ($message['phone'] ?? '') !== ''
+            ? sprintf('<tr><td style="padding:3px 0;width:90px;color:#8A9099;">Téléphone</td><td style="padding:3px 0;"><strong>%s</strong></td></tr>', self::escape((string) $message['phone']))
+            : '';
+
+        return [
+            'subject' => 'Message : ' . $message['subject'],
+            'html' => self::layout(
+                title: self::escape($message['subject']),
+                body: sprintf(
+                    '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;font-family:Arial,sans-serif;font-size:13px;color:#3A3E45;">
+                       <tr><td style="padding:3px 0;width:90px;color:#8A9099;">De</td><td style="padding:3px 0;">%s</td></tr>
+                       <tr><td style="padding:3px 0;color:#8A9099;">E-mail</td><td style="padding:3px 0;"><a href="mailto:%s" style="color:#17191C;">%s</a></td></tr>
+                       %s
+                     </table>
+                     <div style="border-left:3px solid #EDEFF2;padding-left:14px;font-size:14px;line-height:1.7;color:#3A3E45;white-space:pre-wrap;">%s</div>',
+                    self::escape($message['name']),
+                    self::escape($message['email']),
+                    self::escape($message['email']),
+                    $telephone,
+                    self::escape($message['body'])
+                ),
+                buttonLabel: 'Répondre au client',
+                buttonLink: 'mailto:' . $message['email'],
+                footnote: "Ce message est aussi enregistré dans l'administration, où son suivi peut être marqué comme traité."
+            ),
+        ];
+    }
+
     /** Formatage monétaire, aligné sur celui du site. */
     private static function xof(int $amount): string
     {

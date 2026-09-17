@@ -6,9 +6,12 @@ use Rcc\Controllers\AuthController;
 use Rcc\Controllers\CatalogueController;
 use Rcc\Controllers\FavoritesController;
 use Rcc\Controllers\OrdersController;
+use Rcc\Controllers\PublicController;
 use Rcc\Mailer\BrevoMailer;
 use Rcc\Mailer\LogMailer;
 use Rcc\Mailer\Mailer;
+use Rcc\Newsletter\BrevoContactList;
+use Rcc\Newsletter\ContactList;
 
 /**
  * Assemblage de l'application : routes, dépendances, cookies.
@@ -19,8 +22,10 @@ use Rcc\Mailer\Mailer;
  */
 class App
 {
-    public function __construct(private Mailer $mailer)
-    {
+    public function __construct(
+        private Mailer $mailer,
+        private ContactList $contacts,
+    ) {
     }
 
     public function handle(Request $request): Response
@@ -55,6 +60,10 @@ class App
         $router->add('GET', '/orders', fn (Request $r) => $orders->index($r));
         $router->add('GET', '/orders/{reference}', fn (Request $r, string $ref) => $orders->show($r, $ref));
 
+        $public = new PublicController($this->mailer, $this->contacts);
+        $router->add('POST', '/newsletter', fn (Request $r) => $public->subscribe($r));
+        $router->add('POST', '/contact', fn (Request $r) => $public->contact($r));
+
         $response = $router->dispatch($request);
 
         // Les cookies posés pendant le traitement sont recollés ici : le
@@ -62,6 +71,12 @@ class App
         $response->cookies = $cookies->headers();
 
         return $response;
+    }
+
+    /** Liste de contacts de la lettre d'information. */
+    public static function contactList(): ContactList
+    {
+        return new BrevoContactList();
     }
 
     /** Pilote d'envoi choisi par config.php. */

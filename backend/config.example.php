@@ -50,5 +50,10 @@ return [
         'brevo_key'  => 'xkeysib-...',
         'from_email' => 'contact@exemple.com',  // DOIT être un expéditeur vérifié dans Brevo
         'from_name'  => 'RCC Sneakers',
+
+        // Liste de contacts qui reçoit les inscrits à la lettre d'information.
+        // Se lit dans Brevo, onglet Contacts > Listes. À 0, la synchronisation
+        // est ignorée et les inscrits restent seulement en base.
+        'brevo_list_id' => 0,
     ],
 ];

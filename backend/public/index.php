@@ -49,7 +49,7 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
 try {
-    (new App(App::mailer()))->handle(Request::fromGlobals())->send();
+    (new App(App::mailer(), App::contactList()))->handle(Request::fromGlobals())->send();
 } catch (Throwable $e) {
     error_log(sprintf('[rcc] fatal %s: %s dans %s:%d', $e::class, $e->getMessage(), $e->getFile(), $e->getLine()));
 

@@ -5,7 +5,9 @@ namespace Rcc\Tests;
 use Rcc\App;
 use Rcc\Config;
 use Rcc\Request;
+use Rcc\Settings;
 use Rcc\Response;
+use Rcc\Tests\Support\ArrayContactList;
 use Rcc\Tests\Support\ArrayMailer;
 
 /**
@@ -18,6 +20,7 @@ use Rcc\Tests\Support\ArrayMailer;
 abstract class ApiTestCase extends DatabaseTestCase
 {
     protected ArrayMailer $mailer;
+    protected ArrayContactList $contacts;
 
     /** @var array<string,string> */
     protected array $cookies = [];
@@ -34,6 +37,8 @@ abstract class ApiTestCase extends DatabaseTestCase
         Config::load($config);
 
         $this->mailer = new ArrayMailer();
+        $this->contacts = new ArrayContactList();
+        Settings::forget();
         $this->cookies = [];
     }
 
@@ -51,7 +56,7 @@ abstract class ApiTestCase extends DatabaseTestCase
     /** @param array<string,mixed> $body */
     protected function request(string $method, string $path, array $body = []): Response
     {
-        $response = (new App($this->mailer))->handle(
+        $response = (new App($this->mailer, $this->contacts))->handle(
             new Request($method, $path, $body, $this->ip, [], $this->cookies)
         );
 

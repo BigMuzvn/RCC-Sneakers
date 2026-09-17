@@ -126,6 +126,12 @@ class Validator
         return in_array($this->data[$field] ?? false, [true, 1, '1', 'true', 'on'], true);
     }
 
+    /** Ajoute une erreur décidée par l'appelant, pour un champ que ce validateur ne connaît pas. */
+    public function addError(string $field, string $message): void
+    {
+        $this->fail($field, $message);
+    }
+
     public function fails(): bool
     {
         return $this->errors !== [];

@@ -64,6 +64,20 @@ class Response
         return self::error('unauthorized', $message, [], 401);
     }
 
+    /**
+     * 403 et non 401 : la différence dit au client « tu es bien identifié, mais
+     * ce n'est pas pour toi », ce qui évite une boucle de reconnexion inutile.
+     */
+    public static function forbidden(string $message = "Vous n'avez pas accès à cette page."): self
+    {
+        return self::error('forbidden', $message, [], 403);
+    }
+
+    public static function notFound(string $message = "Cette ressource n'existe pas."): self
+    {
+        return self::error('not_found', $message, [], 404);
+    }
+
     public function send(): void
     {
         http_response_code($this->status);

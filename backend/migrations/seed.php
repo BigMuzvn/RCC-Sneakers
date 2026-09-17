@@ -128,6 +128,51 @@ foreach ($zones as [$id, $label, $delay, $fee, $position]) {
 
 printf("  %d zones de livraison\n", count($zones));
 
+// ------------------------------------------------------------------ réglages
+
+/**
+ * Valeurs de départ, toutes modifiables depuis l'administration.
+ *
+ * Elles étaient écrites en dur dans le front — coordonnées du pied de page,
+ * paires mises en avant sur l'accueil. Les faire vivre ici, c'est permettre au
+ * gérant de les changer sans redéploiement.
+ *
+ * Comme pour le stock et les tarifs, le semoir **n'écrase pas** une valeur déjà
+ * présente : le rejouer ne doit pas effacer ce que le gérant a saisi.
+ */
+$settings = [
+    // Les quatre paires du carrousel d'accueil, dans l'ordre d'affichage.
+    'featured_slugs' => json_encode([
+        'nike-shox-tl-black-racer-blue',
+        'nike-p-6000-metallic-silver',
+        'nike-air-max-95-neon',
+        'nike-air-max-plus-sunset',
+    ], JSON_UNESCAPED_SLASHES),
+
+    // Adresse qui reçoit une notification à chaque commande. Sans elle, une
+    // commande arrive sans que personne à la boutique ne le sache.
+    'shop_notification_email' => Config::get('mail.from_email', ''),
+
+    // Coordonnées affichées en pied de page et sur la page contact.
+    'shop_city' => 'Cotonou, Bénin',
+    'shop_phone' => '+229 01 00 00 00 00',
+    'shop_email' => 'contact@rccsneakers.bj',
+    'shop_hours' => 'Retrait en boutique sur rendez-vous',
+
+    'social_instagram' => '',
+    'social_facebook' => '',
+    'social_whatsapp' => '',
+];
+
+foreach ($settings as $name => $value) {
+    $pdo->prepare(
+        'INSERT INTO settings (name, value, updated_at) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = name'
+    )->execute([$name, (string) $value, $now]);
+}
+
+printf("  %d réglages\n", count($settings));
+
 $total = $pdo->query('SELECT SUM(stock) FROM product_variants')->fetchColumn()
     + $pdo->query('SELECT SUM(stock) FROM jersey_variants')->fetchColumn();
 
