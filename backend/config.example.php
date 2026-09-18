@@ -18,6 +18,16 @@ return [
         // avec ses adresses à lui — sinon n'importe qui se donne l'IP qu'il
         // veut et contourne toutes les limitations de débit du site.
         'trusted_proxies' => [],
+
+        // Origines autorisées à appeler l'API depuis un autre domaine, avec le
+        // cookie de session. En développement, le front tourne sur le serveur
+        // Vite et l'API sur un autre port : il faut l'y déclarer.
+        //
+        // **À vider en production** : le front et l'API partagent alors le
+        // domaine et n'ont besoin d'aucune autorisation croisée. Une origine
+        // absente de cette liste n'obtient rien — c'est elle, et non
+        // l'environnement déclaré, qui décide.
+        'cors_origins' => ['http://localhost:5173'],
     ],
 
     'db' => [

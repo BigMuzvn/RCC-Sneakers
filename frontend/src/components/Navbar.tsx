@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
+import SearchOverlay from './SearchOverlay';
 import rccLogo from '../assets/rcc-logo.png';
 import { useCart } from '../context/cart-context';
 import { useAuth } from '../context/auth-context';
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { count, openCart } = useCart();
   const { customer } = useAuth();
 
@@ -43,7 +45,12 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4 sm:gap-5">
-          <button type="button" aria-label="Rechercher" className="text-white/90 transition-colors hover:text-white">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Rechercher"
+            className="text-white/90 transition-colors hover:text-white"
+          >
             <Search className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
           <button
@@ -127,6 +134,8 @@ export default function Navbar() {
           ))}
         </nav>
       </div>
+
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

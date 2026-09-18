@@ -49,6 +49,7 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 | `/maillots` | 12 maillots de clubs et sélections, filtre par championnat |
 | `/maillots/:slug` | Fiche maillot — tailles, stock, flocage, suggestions |
 | `/soldes` | Paires **et** maillots en remise, filtre par famille et 3 tris |
+| *toute autre adresse* | Page 404 : barre, pied de page, l'adresse demandée et trois pistes |
 | `/compte` | Connexion et inscription sur une page, avec interrupteur |
 | `/compte/verifier` | Atterrissage du lien de vérification reçu par e-mail |
 | `/compte/mot-de-passe-oublie` | Demande d'un lien de réinitialisation |
@@ -60,6 +61,16 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 | `/mentions-legales` `/cgv` `/confidentialite` `/cookies` `/livraison-retours` `/authenticite` | Pages légales, gabarit commun |
 
 L'accueil tient en un écran sans défilement (`100svh`) et n'a donc **pas de footer** ; toutes les autres pages en ont un.
+
+## Chercher, et ne jamais tomber dans le vide
+
+**La recherche** se fait dans le navigateur. Le catalogue y est déjà chargé : rien à demander au serveur, les résultats arrivent à la frappe. Une route de recherche n'aurait rien apporté sur trente articles, sinon une attente. Les accents sont retirés des deux côtés de la comparaison — « selections » doit trouver « Sélections », personne ne compose un accent dans un champ de recherche — et chaque mot doit se retrouver, dans n'importe quel ordre : « nike 95 » et « 95 nike » donnent la même paire. Entrée ouvre le premier résultat, Échap referme.
+
+Le bouton existait depuis le début et n'était relié à rien. Une loupe sur toutes les pages qui ne fait rien quand on clique dessus coûte plus de confiance qu'une loupe absente.
+
+**Une adresse inconnue** tombe sur une page 404 et non dans le vide. Il n'y avait aucune route de repli : l'application n'affichait alors rien du tout — pas de barre, pas de pied de page, pas un lien pour repartir. Ce n'est pas un cas d'école, c'est ce qui arrive à une adresse recopiée de travers depuis WhatsApp. La page rappelle l'adresse demandée, parce que la faute de frappe saute aux yeux une fois relue, et propose les trois endroits où l'on voulait probablement aller.
+
+**La destination d'après connexion est vérifiée.** `?suite=` vient de l'adresse, donc de n'importe qui. React Router refusant de quitter le site, il n'y a jamais eu de redirection ouverte — mais il le refusait en levant une exception que personne ne rattrapait : le client se connectait, sa session s'ouvrait, et il restait devant une page blanche. Seul un chemin commençant par une barre oblique unique, et sans deux-points, est désormais suivi.
 
 ## Panier
 
@@ -86,6 +97,8 @@ php bin/admin.php super <e-mail>        # le super administrateur
 ```
 
 Vite proxie `/api` vers le port 8000 : le navigateur ne voit qu'une origine, donc le cookie de session se comporte en développement comme en production.
+
+Les appels venus d'une autre origine ne sont acceptés que **d'une liste déclarée** dans `app.cors_origins`, à vider en production où le front et l'API partagent le domaine. L'origine reçue était auparavant renvoyée telle quelle, avec les identifiants, sous la seule garde d'un `if` sur `app.env` — dont la valeur du gabarit est « local ». Une mise en ligne qui oublie cette ligne, et n'importe quel site visité par un client lisait son compte et agissait en son nom. Avec la liste, un oubli de configuration ne peut plus rendre l'API permissive : seulement inutilisable depuis un poste de développement, ce qui se voit tout de suite.
 
 ### Pourquoi du PHP natif
 

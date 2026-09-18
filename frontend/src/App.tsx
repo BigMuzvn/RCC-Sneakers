@@ -13,6 +13,7 @@ import MotDePasseOublie from './components/MotDePasseOublie';
 import ReinitialiserMotDePasse from './components/ReinitialiserMotDePasse';
 import Checkout from './components/Checkout';
 import PageLegale from './components/PageLegale';
+import PageIntrouvable from './components/PageIntrouvable';
 import CartDrawer from './components/CartDrawer';
 import CartToast from './components/CartToast';
 import { AuthProvider } from './context/AuthContext';
@@ -92,6 +93,10 @@ function App() {
                 {LEGAL_SLUGS.map((slug) => (
                   <Route key={slug} path={`/${slug}`} element={<PageLegale slug={slug} />} />
                 ))}
+
+                {/* En dernier, et sans condition : une adresse inconnue doit
+                    tomber sur une page, jamais dans le vide. */}
+                <Route path="*" element={<PageIntrouvable />} />
               </Routes>
               <CartDrawer />
               <CartToast />

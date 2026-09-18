@@ -55,8 +55,32 @@ const REASONS: Record<string, string> = {
  * celui qu'on avait interrompu au paiement doit revenir au paiement.
  */
 function destination(customer: Customer, next: string | null): string {
-  if (next !== null && next !== '') return next;
+  if (interne(next)) return next;
+
   return customer.is_admin ? '/admin' : '/espace-client';
+}
+
+/**
+ * Une destination acceptable est un chemin de **ce** site.
+ *
+ * `suite` vient de l'adresse, donc de n'importe qui : un lien préparé ailleurs
+ * peut y mettre ce qu'il veut. React Router refuse de sortir du site — il n'y a
+ * donc jamais eu de redirection ouverte — mais il le refuse en levant une
+ * exception que personne ne rattrapait : le client se connectait, sa session
+ * s'ouvrait, et il restait devant une page blanche.
+ *
+ * Le filtre tient en deux conditions. Une seule barre oblique au début, car
+ * « //ailleurs.test » est une adresse complète sans son protocole, que le
+ * navigateur suit hors du site. Et pas de deux-points, qui ouvrirait la porte à
+ * « javascript: » comme à « https: ».
+ */
+function interne(chemin: string | null): chemin is string {
+  return (
+    chemin !== null &&
+    chemin.startsWith('/') &&
+    !chemin.startsWith('//') &&
+    !chemin.includes(':')
+  );
 }
 
 export default function Compte() {
