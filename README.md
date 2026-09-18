@@ -348,6 +348,16 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 - Chaque page a sa dominante : rouge en boutique, ambre en contact, vert en soldes, bleu-cramoisi en maillots.
 - Les couleurs ne sont jamais choisies à l'œil : elles sont **échantillonnées dans l'image** (voir [`docs/CONCEPTION.md`](docs/CONCEPTION.md)).
 
+## Mise en ligne
+
+Le contenu de `frontend/dist/` va dans `public_html/`, celui de `backend/public/` dans `public_html/api/`. `src/`, `config.php` et `migrations/` restent **au-dessus** de la racine web, hors de portée du navigateur.
+
+Chacun des deux dossiers porte son `.htaccess`. Celui du front renvoie vers `index.html` tout ce qui n'est pas un fichier réel : le site est une application d'une seule page, le serveur ne connaît que `index.html`, et c'est le navigateur qui décide quoi afficher. Sans lui, `tondomaine.bj/boutique` renvoie le 404 d'Apache — ce qui arrive au premier lien partagé sur WhatsApp, au premier favori, et à chaque rechargement de page.
+
+Il fixe aussi les caches, et c'est moins anodin qu'il n'y paraît : les fichiers de `assets/` portent une empreinte dans leur nom et peuvent être gardés un an, mais `index.html` ne doit **jamais** l'être. C'est lui qui désigne la version des fichiers à charger ; mis en cache, il réclamerait ceux d'hier après chaque mise en ligne et le site resterait figé pour tous ceux qui l'ont déjà visité.
+
+**Si l'hébergeur relaie le trafic** — Cloudflare, un répartiteur de charge — ses adresses doivent être listées dans `app.trusted_proxies`. Sans quoi tous les visiteurs partagent une seule adresse aux yeux du serveur, et les limitations de débit deviennent communes à tout le monde. Le défaut est volontairement vide : croire `X-Forwarded-For` sans condition annulerait ces limitations, puisque cet en-tête est écrit par celui-là même qu'on cherche à compter.
+
 ## État actuel
 
 **Fait** : les 11 routes, le responsive (vérifié de 360 à 1400 px, sans débordement horizontal ni vertical), les filtres et tris, le sélecteur de tailles avec stock, le panier complet avec persistance, le tunnel de commande, le menu mobile, le footer et sa lettre d'information.
@@ -361,7 +371,7 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 5. ~~**Administration**~~ — faite. Huit écrans, 28 routes, journal des actions.
 6. ~~**Front sur l'API du catalogue**~~ — fait. Les modules `src/data/` sont supprimés, l'administration pilote réellement la boutique.
 7. ~~**Facture PDF**~~ — faite. Générée à la demande, sans dépendance.
-8. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
+8. ~~**Contact et lettre d'information**~~ — faits. Les deux formulaires postent réellement, et alimentent les écrans « Messagerie » et « Newsletter ».
 
 ### Ce qui n'est pas fonctionnel
 

@@ -10,6 +10,14 @@ return [
         'env'   => 'local',                     // 'local' ou 'production'
         'debug' => true,                        // false en production : masque les traces
         'url'   => 'http://localhost:5173',     // origine du front, pour les liens des e-mails
+
+        // Adresses des relais dont on accepte l'en-tête X-Forwarded-For.
+        // Laisser vide sur un hébergement ordinaire : c'est alors la seule
+        // adresse de la connexion TCP qui compte, et elle ne se falsifie pas.
+        // À ne remplir que derrière un Cloudflare ou un répartiteur de charge,
+        // avec ses adresses à lui — sinon n'importe qui se donne l'IP qu'il
+        // veut et contourne toutes les limitations de débit du site.
+        'trusted_proxies' => [],
     ],
 
     'db' => [

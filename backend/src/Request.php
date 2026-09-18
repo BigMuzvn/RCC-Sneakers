@@ -64,16 +64,42 @@ class Request
     }
 
     /**
-     * Sur un mutualisé le trafic passe par un proxy, donc REMOTE_ADDR vaut
-     * souvent l'adresse du proxy. X-Forwarded-For est cependant falsifiable par
-     * le client : cette adresse sert la limitation de débit, jamais une
-     * décision d'authentification.
+     * L'adresse du client, telle qu'on peut la croire.
+     *
+     * `X-Forwarded-For` est un en-tête, c'est-à-dire du texte envoyé par celui
+     * qu'on cherche à identifier. Le lire sans condition annulait toutes les
+     * limitations par IP du site : il suffisait d'en changer la valeur à chaque
+     * requête pour repartir d'un compteur neuf, sur la connexion comme sur
+     * l'inscription ou le mot de passe oublié.
+     *
+     * Il n'est donc cru que si la requête arrive **d'un relais déclaré** dans
+     * `app.trusted_proxies`. Sans relais configuré — le cas d'un hébergement
+     * mutualisé ordinaire — seule `REMOTE_ADDR` fait foi : elle vient de la
+     * connexion TCP et ne se falsifie pas.
+     *
+     * Si l'hébergeur relaie tout son trafic, cette adresse sera la sienne pour
+     * tout le monde et les limitations par IP deviendront communes à tous les
+     * visiteurs. Cela se voit — le site refuse tout le monde à la fois — et se
+     * règle en déclarant son relais. L'inverse, un en-tête cru sur parole, ne
+     * se voit pas.
+     *
+     * Cette adresse sert la limitation de débit, jamais une décision
+     * d'authentification.
      */
     private static function clientIp(): string
     {
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $trusted = Config::get('app.trusted_proxies', []);
+
+        if (!is_array($trusted) || !in_array($remote, $trusted, true)) {
+            return $remote;
+        }
+
         $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
 
         if ($forwarded !== '') {
+            // Le premier de la liste est le client d'origine ; les suivants sont
+            // les relais traversés, qui ajoutent chacun le leur à droite.
             $first = trim(explode(',', $forwarded)[0]);
 
             if (filter_var($first, FILTER_VALIDATE_IP)) {
@@ -81,6 +107,6 @@ class Request
             }
         }
 
-        return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        return $remote;
     }
 }

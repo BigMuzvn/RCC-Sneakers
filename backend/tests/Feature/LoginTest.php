@@ -198,6 +198,13 @@ class LoginTest extends ApiTestCase
         $response = $this->post('/auth/login', ['identifier' => '', 'password' => '']);
 
         $this->assertSame(422, $response->status);
-        $this->assertSame(0, (int) Database::first('SELECT COUNT(*) c FROM auth_attempts')['c']);
+
+        // Le compteur est filtré sur l'action : l'inscription du setUp en
+        // enregistre une de son côté depuis qu'elle est elle aussi limitée, et
+        // ce test-ci ne parle que des tentatives de connexion.
+        $this->assertSame(
+            0,
+            (int) Database::first("SELECT COUNT(*) c FROM auth_attempts WHERE action = 'login'")['c']
+        );
     }
 }

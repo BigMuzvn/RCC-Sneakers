@@ -19,6 +19,85 @@ class RegisterTest extends ApiTestCase
         ], $override);
     }
 
+    /**
+     * L'inscription était le seul formulaire public sans limitation de débit.
+     * Chaque compte créé envoie un e-mail de vérification : un script qui
+     * boucle épuisait le forfait Brevo et coupait tous les envois de la
+     * boutique, confirmations de commande comprises.
+     */
+    public function test_les_inscriptions_en_rafale_sont_arretees(): void
+    {
+        $refus = null;
+
+        // Adresses et numéros tous différents : c'est le plafond par IP qui
+        // doit arrêter, celui par identifiant ne verrait jamais rien.
+        for ($i = 0; $i < 12; $i++) {
+            $response = $this->post('/auth/register', $this->valid([
+                'email' => "robot{$i}@exemple.com",
+                'phone' => '01970001' . str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+            ]));
+
+            $this->forgetCookies();
+
+            if ($response->status === 429) {
+                $refus = $i;
+                break;
+            }
+        }
+
+        $this->assertNotNull($refus, 'une rafale d’inscriptions aurait dû être arrêtée');
+        $this->assertSame(
+            $refus,
+            (int) Database::first('SELECT COUNT(*) c FROM customers')['c'],
+            'aucun compte ne doit être créé après le refus'
+        );
+    }
+
+    /** Le refus laisse un délai, pas une porte close sans explication. */
+    public function test_le_refus_annonce_quand_reessayer(): void
+    {
+        for ($i = 0; $i < 12; $i++) {
+            $response = $this->post('/auth/register', $this->valid([
+                'email' => "rafale{$i}@exemple.com",
+                'phone' => '01970002' . str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+            ]));
+
+            $this->forgetCookies();
+
+            if ($response->status === 429) {
+                $this->assertSame('too_many_attempts', $response->payload['error']['code']);
+                $this->assertMatchesRegularExpression('/\d+ minute/', $response->payload['error']['message']);
+
+                return;
+            }
+        }
+
+        $this->fail('la rafale n’a jamais été arrêtée');
+    }
+
+    /**
+     * Une adresse déjà prise n'envoie aucun e-mail : la reprendre pour corriger
+     * son numéro ne doit pas consommer le quota de quelqu'un d'honnête.
+     */
+    public function test_une_tentative_refusee_pour_doublon_ne_consomme_pas_le_quota(): void
+    {
+        $this->post('/auth/register', $this->valid());
+        $this->forgetCookies();
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->post('/auth/register', $this->valid(['phone' => '0197000999']));
+            $this->forgetCookies();
+        }
+
+        // Après six refus pour doublon, une inscription neuve doit encore passer.
+        $response = $this->post('/auth/register', $this->valid([
+            'email' => 'honnete@exemple.com',
+            'phone' => '0197000123',
+        ]));
+
+        $this->assertSame(201, $response->status, 'les refus pour doublon ne doivent pas compter');
+    }
+
     public function test_une_inscription_valide_cree_le_compte(): void
     {
         $response = $this->post('/auth/register', $this->valid());

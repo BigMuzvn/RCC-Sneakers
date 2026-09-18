@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Mail, MapPin, Phone } from 'lucide-react';
 import rccLogo from '../assets/rcc-logo.png';
+import { ApiFailure, api } from '../api/client';
 import { LEGAL_PAGES, LEGAL_SLUGS } from '../data/legal';
 import { useCatalogue } from '../context/catalogue-context';
 
@@ -12,8 +13,45 @@ const SOCIALS = [
   { key: 'social_whatsapp', label: 'WhatsApp' },
 ] as const;
 
+/**
+ * La lettre d'information.
+ *
+ * L'inscription part vers `POST /api/newsletter`, qui l'enregistre et la pousse
+ * vers Brevo. Ce formulaire se contentait d'afficher « Inscription enregistrée »
+ * sans rien envoyer : la promesse était fausse, et l'écran « Newsletter » de
+ * l'administration serait resté vide indéfiniment.
+ */
 function Newsletter() {
-  const [signedUp, setSignedUp] = useState(false);
+  const [signedUp, setSignedUp] = useState('');
+  const [erreur, setErreur] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const inscrire = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErreur('');
+    setSending(true);
+
+    const email = String(new FormData(event.currentTarget).get('email') ?? '');
+
+    try {
+      // `source` distingue les inscriptions du pied de page de celles qui
+      // viendront d'ailleurs : sans elle, on ne saurait pas ce qui recrute.
+      const reponse = await api<{ message: string }>('/newsletter', {
+        method: 'POST',
+        body: { email, source: 'footer' },
+      });
+
+      setSignedUp(reponse.message);
+    } catch (error) {
+      setErreur(
+        error instanceof ApiFailure
+          ? (Object.values(error.fields)[0] ?? error.message)
+          : "L'inscription n'a pas abouti. Réessayez dans un instant.",
+      );
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="border-y border-white/10 py-8 sm:py-10">
@@ -27,24 +65,15 @@ function Newsletter() {
           </p>
         </div>
 
-        {signedUp ? (
+        {signedUp !== '' ? (
           <div className="flex items-center gap-3 lg:w-[420px]">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C]">
               <Check className="h-4 w-4" strokeWidth={2.5} />
             </span>
-            <p className="text-[11px] leading-[1.6] text-white/70">
-              Inscription enregistrée. À très vite pour le prochain drop.
-            </p>
+            <p className="text-[11px] leading-[1.6] text-white/70">{signedUp}</p>
           </div>
         ) : (
-          <form
-            className="flex w-full items-stretch gap-2 lg:w-[420px]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              // TODO: POST /api/newsletter — nothing is stored yet
-              setSignedUp(true);
-            }}
-          >
+          <form className="flex w-full flex-wrap items-stretch gap-2 lg:w-[420px]" onSubmit={(event) => void inscrire(event)}>
             <label htmlFor="newsletter-email" className="sr-only">
               Votre adresse e-mail
             </label>
@@ -59,12 +88,19 @@ function Newsletter() {
             />
             <button
               type="submit"
+              disabled={sending}
               aria-label="S’inscrire à la lettre d’information"
-              className="flex shrink-0 items-center gap-2 bg-white px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 sm:px-6"
+              className="flex shrink-0 items-center gap-2 bg-white px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
             >
-              <span className="hidden sm:inline">S’inscrire</span>
+              <span className="hidden sm:inline">{sending ? 'Envoi…' : 'S’inscrire'}</span>
               <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
             </button>
+
+            {erreur !== '' && (
+              <p role="alert" className="w-full text-[10px] leading-[1.5] text-[#E2564A]">
+                {erreur}
+              </p>
+            )}
           </form>
         )}
       </div>

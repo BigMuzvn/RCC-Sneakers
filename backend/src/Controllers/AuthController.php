@@ -45,6 +45,28 @@ class AuthController
             return Response::validation($taken);
         }
 
+        // L'inscription était le seul formulaire public sans garde — connexion,
+        // mot de passe oublié, lettre d'information et contact en avaient un.
+        // Chaque compte créé envoie pourtant un e-mail de vérification : un
+        // script qui boucle épuise le forfait Brevo en quelques minutes et coupe
+        // tous les envois de la boutique, confirmations de commande comprises.
+        //
+        // Le plafond par IP est délibérément large. Au Bénin, les clients en
+        // données mobiles partagent l'adresse publique de leur opérateur, et un
+        // cybercafé inscrit parfois plusieurs personnes de suite : une limite
+        // serrée refuserait de vrais acheteurs avant d'arrêter un robot.
+        //
+        // Il est posé après le contrôle d'unicité : quelqu'un qui reprend son
+        // formulaire parce qu'il s'est trompé de numéro n'envoie aucun e-mail,
+        // et ne doit donc pas consommer son quota.
+        $limiter = RateLimiter::email('register');
+
+        if ($limiter->isBlocked($email, $request->ip)) {
+            return $this->tooMany($limiter->retryAfter($email, $request->ip));
+        }
+
+        $limiter->record($email, $request->ip);
+
         try {
             Database::run(
                 'INSERT INTO customers

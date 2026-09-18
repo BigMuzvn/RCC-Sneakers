@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, Clock, Mail, MapPin, Phone } from 'lucide-react';
+import { ApiFailure, api } from '../api/client';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import HangingShoe from './HangingShoe';
@@ -28,11 +29,70 @@ const SUBJECTS = ['Disponibilité d’une paire', 'Suivi de commande', 'Retour o
 const inputClass =
   'w-full border border-white/15 bg-white/[0.03] px-3.5 py-3 text-[12px] text-white placeholder:text-white/35 transition-colors focus:border-white/50 focus:outline-none';
 
+/** Un champ refusé se signale par sa bordure, avant même qu'on lise le motif. */
+const champ = (erreur?: string) => `${inputClass}${erreur ? ' border-[#E2564A]/70' : ''}`;
+
+function Erreur({ message }: { message?: string }) {
+  if (!message) return null;
+
+  return <span className="text-[10px] leading-[1.5] text-[#E2564A]">{message}</span>;
+}
+
 export default function Contact() {
   const { settings } = useCatalogue();
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState('');
+  const [sending, setSending] = useState(false);
 
   const channels = channelsOf(settings);
+
+  /**
+   * Le message part réellement vers `POST /api/contact`, qui l'enregistre,
+   * prévient la boutique et alimente l'écran « Messagerie » de
+   * l'administration. Ce formulaire se contentait d'afficher une confirmation :
+   * le client croyait avoir écrit, et personne ne recevait rien.
+   */
+  const envoyer = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrors({});
+    setNotice('');
+    setSending(true);
+
+    const data = new FormData(event.currentTarget);
+
+    try {
+      const reponse = await api<{ message: string }>('/contact', {
+        method: 'POST',
+        body: {
+          name: String(data.get('name') ?? ''),
+          email: String(data.get('email') ?? ''),
+          phone: String(data.get('phone') ?? ''),
+          subject: String(data.get('subject') ?? ''),
+          message: String(data.get('message') ?? ''),
+        },
+      });
+
+      // On affiche la phrase du serveur plutôt qu'une phrase écrite ici : le
+      // délai de réponse annoncé doit tenir à un seul endroit.
+      setSent(reponse.message);
+    } catch (error) {
+      setSending(false);
+
+      if (error instanceof ApiFailure) {
+        setErrors(error.fields);
+        // Trop d'envois, réseau coupé : une erreur sans champ associé doit
+        // quand même s'afficher quelque part.
+        if (Object.keys(error.fields).length === 0) setNotice(error.message);
+      } else {
+        setNotice('Une erreur est survenue. Réessayez dans un instant.');
+      }
+
+      return;
+    }
+
+    setSending(false);
+  };
 
   return (
     <div className="relative flex min-h-[100svh] w-full flex-col overflow-x-clip">
@@ -68,50 +128,45 @@ export default function Contact() {
           <section>
             <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#EDEFF2]">Écrivez-nous</h2>
 
-            {sent ? (
+            {sent !== '' ? (
               <div className="mt-5 flex flex-col items-start border border-white/15 bg-white/[0.03] px-6 py-10">
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EDEFF2] text-[#17191C]">
                   <Check className="h-5 w-5" strokeWidth={2.5} />
                 </span>
                 <p className="mt-4 text-sm font-bold uppercase tracking-[0.12em] text-[#EDEFF2]">Message enregistré</p>
-                <p className="mt-2 text-[11px] leading-[1.7] text-white/55">
-                  Merci, nous revenons vers vous sous 24 h ouvrées.
-                </p>
+                <p className="mt-2 text-[11px] leading-[1.7] text-white/55">{sent}</p>
                 <button
                   type="button"
-                  onClick={() => setSent(false)}
+                  onClick={() => setSent('')}
                   className="mt-6 border border-white px-6 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white hover:text-[#141516]"
                 >
                   Écrire un autre message
                 </button>
               </div>
             ) : (
-              <form
-                className="mt-5 flex flex-col gap-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setSent(true);
-                }}
-              >
+              <form className="mt-5 flex flex-col gap-4" onSubmit={(event) => void envoyer(event)}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="flex flex-col gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">Nom complet</span>
-                    <input required type="text" name="name" autoComplete="name" placeholder="Votre nom" className={inputClass} />
+                    <input required type="text" name="name" autoComplete="name" placeholder="Votre nom" className={champ(errors.name)} />
+                    <Erreur message={errors.name} />
                   </label>
                   <label className="flex flex-col gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">Téléphone</span>
-                    <input required type="tel" name="phone" autoComplete="tel" placeholder="+229 ..." className={inputClass} />
+                    <input required type="tel" name="phone" autoComplete="tel" placeholder="+229 ..." className={champ(errors.phone)} />
+                    <Erreur message={errors.phone} />
                   </label>
                 </div>
 
                 <label className="flex flex-col gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">E-mail</span>
-                  <input required type="email" name="email" autoComplete="email" placeholder="vous@exemple.com" className={inputClass} />
+                  <input required type="email" name="email" autoComplete="email" placeholder="vous@exemple.com" className={champ(errors.email)} />
+                  <Erreur message={errors.email} />
                 </label>
 
                 <label className="flex flex-col gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">Sujet</span>
-                  <select required name="subject" defaultValue="" className={inputClass}>
+                  <select required name="subject" defaultValue="" className={champ(errors.subject)}>
                     <option value="" disabled>
                       Choisir un sujet
                     </option>
@@ -130,15 +185,23 @@ export default function Contact() {
                     name="message"
                     rows={5}
                     placeholder="Dites-nous en quelques mots ce qu'il vous faut."
-                    className={`${inputClass} resize-none`}
+                    className={`${champ(errors.message)} resize-none`}
                   />
+                  <Erreur message={errors.message} />
                 </label>
+
+                {notice !== '' && (
+                  <p className="border border-[#E2564A]/40 bg-[#E2564A]/[0.07] px-4 py-3 text-[11px] leading-[1.6] text-[#F2A79E]">
+                    {notice}
+                  </p>
+                )}
 
                 <button
                   type="submit"
-                  className="mt-1 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 sm:w-fit sm:px-10 sm:tracking-[0.14em]"
+                  disabled={sending}
+                  className="mt-1 w-full bg-white px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#141516] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit sm:px-10 sm:tracking-[0.14em]"
                 >
-                  Envoyer le message
+                  {sending ? 'Envoi…' : 'Envoyer le message'}
                 </button>
               </form>
             )}
