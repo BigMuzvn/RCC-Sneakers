@@ -59,6 +59,12 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
+// L'API ne rend que du JSON et un PDF : elle n'a besoin de charger strictement
+// rien. Tout interdire ferme d'avance la porte à une réponse détournée qui
+// serait affichée comme une page — un fichier téléversé, un message d'erreur
+// recopié — et qui tenterait d'exécuter quelque chose.
+header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+
 try {
     (new App(App::mailer(), App::contactList()))->handle(Request::fromGlobals())->send();
 } catch (Throwable $e) {

@@ -505,18 +505,6 @@ class AuthController
 
     private function tooMany(int $retryAfter): Response
     {
-        $minutes = max(1, (int) ceil($retryAfter / 60));
-
-        $response = Response::error(
-            'too_many_attempts',
-            sprintf('Trop de tentatives. Réessayez dans %d minute%s.', $minutes, $minutes > 1 ? 's' : ''),
-            [],
-            429
-        );
-
-        return new Response(
-            $response->status,
-            ['error' => $response->payload['error'] + ['retry_after' => $retryAfter]]
-        );
+        return Response::tooMany($retryAfter);
     }
 }

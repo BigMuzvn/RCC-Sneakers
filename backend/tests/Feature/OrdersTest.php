@@ -53,6 +53,53 @@ class OrdersTest extends ApiTestCase
         return (int) Database::first('SELECT fee_xof FROM delivery_zones WHERE id = ?', [$zone])['fee_xof'];
     }
 
+    // --------------------------------------------------- limitation de débit
+
+    /**
+     * Le stock borne ce qu'on peut commander, mais pas les e-mails : chaque
+     * commande en envoie deux. Un client agacé qui clique dix fois, ou un compte
+     * détourné, épuiserait le forfait d'envoi et couperait toutes les
+     * confirmations de la boutique.
+     */
+    public function test_les_commandes_en_rafale_sont_arretees(): void
+    {
+        $this->setStock('sneaker', self::PRODUIT, self::TAILLE, 100);
+
+        $refus = null;
+
+        for ($i = 0; $i < 9; $i++) {
+            $response = $this->post('/orders', $this->commande());
+
+            if ($response->status === 429) {
+                $refus = $response;
+                break;
+            }
+        }
+
+        $this->assertNotNull($refus, 'une rafale de commandes aurait dû être arrêtée');
+        $this->assertSame('too_many_attempts', $refus->payload['error']['code']);
+        $this->assertStringContainsString('commandes', $refus->payload['error']['message']);
+        $this->assertArrayHasKey('retry_after', $refus->payload['error']);
+    }
+
+    /**
+     * Un panier refusé pour rupture de stock n'envoie aucun e-mail : il ne doit
+     * donc rien consommer. Sans cette précaution, quelqu'un qui tombe sur une
+     * taille épuisée et réessaie se verrait fermer la porte.
+     */
+    public function test_un_refus_pour_rupture_ne_consomme_pas_le_quota(): void
+    {
+        $this->setStock('sneaker', self::PRODUIT, self::TAILLE, 0);
+
+        for ($i = 0; $i < 8; $i++) {
+            $this->assertSame(422, $this->post('/orders', $this->commande())->status);
+        }
+
+        $this->setStock('sneaker', self::PRODUIT, self::TAILLE, 5);
+
+        $this->assertSame(201, $this->post('/orders', $this->commande())->status);
+    }
+
     // ------------------------------------------------------------- accès
 
     public function test_commander_exige_un_compte(): void

@@ -8,6 +8,7 @@ import hangingDunk from '../assets/hanging-dunk-russet.png';
 import { useCart } from '../context/cart-context';
 import { useAuth } from '../context/auth-context';
 import { ApiFailure, api } from '../api/client';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 
 const PAGE_GRADIENT =
@@ -37,6 +38,7 @@ const labelClass = 'text-[10px] font-bold uppercase tracking-[0.16em] text-white
 
 export default function Checkout() {
   const { lines, subtotal, clear, remove } = useCart();
+  const { reload } = useCatalogue();
   const { customer, loading } = useAuth();
   const navigate = useNavigate();
   const [zones, setZones] = useState<Zone[]>([]);
@@ -107,6 +109,12 @@ export default function Checkout() {
 
       setReference(order.order.reference);
       clear();
+
+      // Le stock vient de changer en base. Sans cette relecture, l'onglet
+      // continuerait d'annoncer les quantités d'avant la vente : le client qui
+      // retourne sur la fiche verrait sa taille encore disponible, et le
+      // vendeur qui montre le site croirait à un bug.
+      reload();
     } catch (error) {
       setSubmitting(false);
 

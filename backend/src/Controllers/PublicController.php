@@ -190,12 +190,6 @@ class PublicController
 
     private function tooMany(int $retryAfter): Response
     {
-        $minutes = max(1, (int) ceil($retryAfter / 60));
-
-        return new Response(429, ['error' => [
-            'code' => 'too_many_attempts',
-            'message' => sprintf('Trop de tentatives. Réessayez dans %d minute%s.', $minutes, $minutes > 1 ? 's' : ''),
-            'retry_after' => $retryAfter,
-        ]]);
+        return Response::tooMany($retryAfter);
     }
 }

@@ -3,6 +3,7 @@
 namespace Rcc\Tests\Feature;
 
 use Rcc\Database;
+use Rcc\Invoice;
 use Rcc\Settings;
 use Rcc\Tests\ApiTestCase;
 
@@ -149,6 +150,78 @@ class InvoiceTest extends ApiTestCase
 
         $this->assertStringContainsString('RCCM', $avec->binary);
         $this->assertStringContainsString('RB/COT/26 B 12345', $avec->binary);
+    }
+
+    /**
+     * Le report de page.
+     *
+     * Le panier accepte soixante lignes. Sans report, les dernières
+     * s'imprimeraient sous le bas de la feuille — c'est-à-dire nulle part, sans
+     * que rien ne le signale. Ce chemin n'était vérifié que par une facture
+     * fabriquée à la main, en dehors de la suite.
+     */
+    public function test_une_commande_longue_passe_a_la_page_suivante(): void
+    {
+        $courte = Invoice::render($this->commandeDe(2));
+        $longue = Invoice::render($this->commandeDe(30));
+
+        $this->assertSame(1, $this->pages($courte), 'deux articles tiennent sur une page');
+        $this->assertGreaterThan(1, $this->pages($longue), 'trente articles doivent déborder');
+
+        // Le bloc des totaux n'est écrit qu'une fois, sur la dernière page. On
+        // le repère à « Sous-total » : « TOTAL » seul est aussi l'en-tête de la
+        // dernière colonne, qui se répète légitimement à chaque page.
+        $this->assertSame(1, substr_count($longue, 'Sous-total'));
+        $this->assertSame(2, substr_count($longue, 'ARTICLE'), 'un en-tête de tableau par page');
+
+        // Et chaque article est bien là, aucun perdu au passage d'une page.
+        for ($i = 1; $i <= 30; $i++) {
+            $this->assertStringContainsString("Article {$i} ", $longue, "l'article {$i} manque");
+        }
+    }
+
+    /** Une page de PDF est un objet qui se déclare comme tel. */
+    private function pages(string $pdf): int
+    {
+        return substr_count($pdf, '/Type /Page ');
+    }
+
+    /** @return array<string,mixed> une commande fabriquée, sans passer par la base */
+    private function commandeDe(int $lignes): array
+    {
+        $items = [];
+
+        for ($i = 1; $i <= $lignes; $i++) {
+            $items[] = [
+                'item_type' => 'sneaker',
+                'item_id' => $i,
+                'title' => "Article {$i} ",
+                'subtitle' => 'Coloris de contrôle',
+                'size' => '42',
+                'unit_price_xof' => 50000,
+                'qty' => 1,
+                'line_total_xof' => 50000,
+                'image' => null,
+            ];
+        }
+
+        return [
+            'reference' => 'RCC-260918-TEST',
+            'status' => 'confirmed',
+            'payment_method' => 'cash',
+            'payment_status' => 'unpaid',
+            'contact_name' => 'Client Témoin',
+            'contact_email' => 'temoin@exemple.bj',
+            'contact_phone' => '+229 01 97 00 00 11',
+            'delivery_zone' => 'cotonou',
+            'delivery_label' => 'Cotonou centre',
+            'delivery_address' => 'Carré 1234, Cotonou',
+            'subtotal_xof' => 50000 * $lignes,
+            'delivery_fee_xof' => 1000,
+            'total_xof' => 50000 * $lignes + 1000,
+            'created_at' => '2026-09-18 09:37:19',
+            'items' => $items,
+        ];
     }
 
     public function test_une_reference_inconnue_ne_produit_pas_de_document(): void

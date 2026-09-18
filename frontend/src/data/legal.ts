@@ -38,7 +38,7 @@ export const LEGAL_PAGES: Record<string, LegalPage> = {
           'Siège social : [ADRESSE COMPLÈTE], Cotonou, Bénin',
           'RCCM : [NUMÉRO RCCM]',
           'IFU : [NUMÉRO IFU]',
-          'Téléphone : [NUMÉRO]',
+          'Téléphone : +229 01 97 86 46 48',
           'E-mail : contact@rccsneakers.bj',
         ],
       },

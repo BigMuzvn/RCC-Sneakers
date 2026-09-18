@@ -7,6 +7,7 @@ use Rcc\Database;
 use Rcc\Invoice;
 use Rcc\Mailer\Emails;
 use Rcc\Mailer\Mailer;
+use Rcc\RateLimiter;
 use Rcc\Request;
 use Rcc\Response;
 use Rcc\Settings;
@@ -91,6 +92,25 @@ class OrdersController
             return Response::validation(['items' => 'Trop d’articles dans une même commande.']);
         }
 
+        // Le stock borne déjà ce qu'on peut commander, mais pas les e-mails :
+        // chaque commande en envoie deux, un au client et un à la boutique. Un
+        // client agacé qui clique dix fois, ou un compte détourné, épuiserait le
+        // forfait Brevo et couperait tous les envois de la boutique.
+        //
+        // Le plafond est posé sur le **compte** et non sur l'adresse de
+        // livraison : c'est le compte qui commande. Il est large — personne ne
+        // passe six commandes en une heure de bonne foi, mais reprendre un
+        // paiement refusé ou commander pour un ami doit rester possible.
+        $limiter = new RateLimiter('order', maxPerIdentifier: 6, maxPerIp: 15, windowSeconds: 3600);
+        $compte = (string) $customer['id'];
+
+        if ($limiter->isBlocked($compte, $request->ip)) {
+            return Response::tooMany(
+                $limiter->retryAfter($compte, $request->ip),
+                'Trop de commandes coup sur coup.'
+            );
+        }
+
         $pdo = Database::connection();
         $pdo->beginTransaction();
 
@@ -157,6 +177,10 @@ class OrdersController
 
             throw $e;
         }
+
+        // Compté seulement maintenant : un panier refusé pour rupture de stock
+        // n'envoie aucun e-mail et ne doit donc rien consommer du quota.
+        $limiter->record($compte, $request->ip);
 
         $order = $this->loadOrder($orderId);
 

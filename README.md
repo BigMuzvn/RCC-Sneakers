@@ -285,6 +285,12 @@ Les montants sont **alignés par la droite**, ce qui suppose de connaître la la
 
 **RCCM et IFU** sont deux réglages, vides par défaut, et ne s'impriment que renseignés. Ce sont des identifiants officiels : ils n'ont pas été inventés, et une facture sans RCCM vaut mieux qu'une facture avec un faux.
 
+### Le débit des commandes
+
+Le stock borne ce qu'on peut commander, mais pas les e-mails : chaque commande en envoie deux, un au client et un à la boutique. Un client agacé qui clique dix fois, ou un compte détourné, épuiserait le forfait d'envoi et couperait toutes les confirmations de la boutique. Le plafond porte sur le **compte** — c'est lui qui commande, pas l'adresse de livraison — et il n'est décompté qu'une fois la commande réellement enregistrée : un panier refusé pour rupture de stock n'envoie rien et ne doit rien consommer.
+
+Après une commande, le catalogue est relu. Sans cela l'onglet continuerait d'annoncer les quantités d'avant la vente : le client qui retourne sur la fiche verrait sa taille encore disponible, et le vendeur qui montre le site croirait à un défaut.
+
 ## Espace client
 
 Trois volets : **commandes**, **informations**, **favoris**.
@@ -369,6 +375,10 @@ Chacun des deux dossiers porte son `.htaccess`. Celui du front renvoie vers `ind
 
 Il fixe aussi les caches, et c'est moins anodin qu'il n'y paraît : les fichiers de `assets/` portent une empreinte dans leur nom et peuvent être gardés un an, mais `index.html` ne doit **jamais** l'être. C'est lui qui désigne la version des fichiers à charger ; mis en cache, il réclamerait ceux d'hier après chaque mise en ligne et le site resterait figé pour tous ceux qui l'ont déjà visité.
 
+**Une politique de sécurité du contenu** accompagne les deux dossiers. Celle du front autorise ses propres fichiers et rien d'autre : le JavaScript est compilé, donc `script-src 'self'` suffit ; les styles acceptent l'inline parce que le dégradé de chaque fiche est calculé à partir de la couleur de l'article et ne peut pas vivre dans une feuille écrite d'avance. Celle de l'API interdit tout, puisqu'elle ne rend que du JSON et un PDF. Leur intérêt n'est pas de corriger une faille connue mais de limiter les dégâts d'une faille qu'on n'a pas vue.
+
+Elle ne se lit qu'au navigateur : une règle trop stricte ne se voit pas dans le code, elle se voit quand la page reste noire chez le client. Elle a donc été éprouvée sur le vrai build, servi avec ses en-têtes et l'API sur la même origine — six pages rendues, vingt produits chargés, polices et visuels décodés, zéro blocage signalé.
+
 **Si l'hébergeur relaie le trafic** — Cloudflare, un répartiteur de charge — ses adresses doivent être listées dans `app.trusted_proxies`. Sans quoi tous les visiteurs partagent une seule adresse aux yeux du serveur, et les limitations de débit deviennent communes à tout le monde. Le défaut est volontairement vide : croire `X-Forwarded-For` sans condition annulerait ces limitations, puisque cet en-tête est écrit par celui-là même qu'on cherche à compter.
 
 ## État actuel
@@ -395,6 +405,7 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Paiement en ligne | Refusé par le serveur, désactivé dans le tunnel. Aucun agrégateur n'est branché. Seul le paiement à la livraison fonctionne — et il fonctionne entièrement. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
+| Adresse e-mail publique | `contact@rccsneakers.bj` est encore une adresse d'exemple, à remplacer dans les réglages. |
 | Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |
 | Tarifs de livraison | 1 000 / 1 500 / 2 500 F CFA sont des valeurs de remplacement, en haut de `Checkout.tsx`. |
 | Coordonnées | Téléphone, e-mail et liens réseaux sont des valeurs de remplacement, en haut de `Footer.tsx` et `Contact.tsx`. |

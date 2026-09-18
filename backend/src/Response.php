@@ -95,6 +95,27 @@ class Response
         return self::error('forbidden', $message, [], 403);
     }
 
+    /**
+     * Trop de requêtes, avec le délai avant la suivante.
+     *
+     * Le délai est dans la charge utile plutôt que dans un en-tête seul : c'est
+     * l'interface qui doit pouvoir dire « réessayez dans trois minutes », et
+     * elle ne lit pas les en-têtes.
+     *
+     * La phrase est un paramètre parce que « trop de tentatives » convient à une
+     * connexion refusée, pas à un client qui commande deux fois de suite.
+     */
+    public static function tooMany(int $retryAfter, string $message = 'Trop de tentatives.'): self
+    {
+        $minutes = max(1, (int) ceil($retryAfter / 60));
+
+        return new self(429, ['error' => [
+            'code' => 'too_many_attempts',
+            'message' => sprintf('%s Réessayez dans %d minute%s.', $message, $minutes, $minutes > 1 ? 's' : ''),
+            'retry_after' => $retryAfter,
+        ]]);
+    }
+
     public static function notFound(string $message = "Cette ressource n'existe pas."): self
     {
         return self::error('not_found', $message, [], 404);

@@ -45,7 +45,24 @@
     ExpiresByType font/woff2 "access plus 1 year"
 </IfModule>
 
+# ---------------------------------------------- politique de sécurité du contenu
+#
+# Elle dit au navigateur d'où il a le droit de charger quoi. Son intérêt est de
+# limiter les dégâts d'une faille qu'on n'a pas vue : même si un texte hostile
+# se retrouvait un jour dans la page, aucun script venu d'ailleurs ne pourrait
+# s'exécuter, et rien ne pourrait être envoyé vers un autre domaine.
+#
+# `style-src` accepte l'inline parce que les dégradés de chaque fiche sont posés
+# en attribut `style` — ils sont calculés à partir de la couleur de l'article, et
+# ne peuvent donc pas vivre dans une feuille écrite d'avance. `script-src` ne
+# l'accepte pas : tout le JavaScript est compilé dans un fichier.
+#
+# `connect-src 'self'` suffit parce que l'API partage le domaine. Si elle était
+# un jour hébergée ailleurs, c'est cette ligne qu'il faudrait ouvrir — et rien
+# d'autre.
 <IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+
     <FilesMatch "\.(css|js|webp|png|svg|woff2?)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
