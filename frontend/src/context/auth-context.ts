@@ -7,6 +7,8 @@ export type Customer = {
   email: string;
   phone: string;
   email_verified: boolean;
+  /** Affiche l'accès à l'administration. Ne protège rien : le serveur revérifie. */
+  is_admin: boolean;
   created_at: string;
 };
 

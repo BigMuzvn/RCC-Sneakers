@@ -233,3 +233,51 @@ Douze cartes ne menaient nulle part. C'était le trou le plus visible du site : 
 La fiche reprend la structure de la fiche sneaker, adaptée aux données réelles des maillots : championnat, équipementier, saison, tailles S à XXL. Aucun maillot n'ayant encore de rendu, le **nom du club en filigrane** remplace l'image — une zone vide se lirait comme une image cassée, un nom de club en très grand se lit comme un parti pris.
 
 Deux mesures ont ajusté ce filigrane. « FC Barcelone » occupait 657 px dans une boîte de 659 et collait aux deux bords ; la taille a été réduite jusqu'à laisser une marge. Et « Visuel à venir », posé au centre, se superposait au nom : il est descendu en bas de cadre.
+
+## 12. L'administration
+
+### Une garde, un seul endroit
+
+Vingt-huit routes d'administration. La tentation naturelle est d'ouvrir chaque méthode par `if (!admin) return 403`. C'est une erreur de conception : une garde recopiée trente fois finit par être oubliée une fois, et cet oubli-là ouvre la boutique.
+
+Elle est donc appliquée dans le routeur, en enveloppant chaque gestionnaire. Le contrôleur ne peut pas recevoir une requête non autorisée — il reçoit l'administrateur en second argument, déjà vérifié. Un test parcourt les vingt-huit routes aux trois niveaux d'accès ; ajouter une route sans l'y inscrire fera échouer la suite.
+
+### Pas de second système d'authentification
+
+Un drapeau sur `customers`, pas une table et une connexion dédiées. Un système parallèle demanderait ses propres sessions, sa propre limitation de débit, sa propre gestion des mots de passe oubliés — deux fois le code, deux fois la surface à sécuriser, pour une équipe de deux personnes.
+
+Le premier administrateur naît d'une commande sur le serveur. Une page « devenir administrateur », même bien cachée, finit toujours par être trouvée ; exiger un accès au serveur ferme la question. La commande refuse par ailleurs de retirer le dernier accès — sans quoi on se verrouille dehors.
+
+### Le ré-encodage des images règle trois problèmes d'un geste
+
+Aucune image téléversée n'est recopiée telle quelle. Elle est décodée, redimensionnée, ré-encodée en WebP.
+
+Sécurité d'abord : un PHP dissimulé dans les octets d'un PNG ne survit pas à un décodage suivi d'un ré-encodage. Vérifier l'extension ne prouve rien, vérifier l'en-tête est mieux, ré-encoder est définitif.
+
+Poids ensuite. Mesuré sur un rendu existant : **1 804 Ko → 127 Ko, 93 % de moins**, transparence conservée, en 487 ms. Les visuels actuels du site pèsent 1,5 à 2,6 Mo chacun, ce qui est intenable sur une connexion mobile à Cotonou.
+
+Cohérence enfin : quoi qu'envoie le gérant, tout finit au même format et à la même échelle.
+
+### Anonymiser plutôt que supprimer
+
+Les pages légales promettent un droit d'effacement. Mais une commande est une pièce comptable, et la clé étrangère `ON DELETE RESTRICT` refuse de toute façon de supprimer un client qui en a passé.
+
+L'anonymisation résout les deux : l'identité disparaît — nom, adresse, téléphone, favoris, jetons, inscription à la lettre — **y compris dans les coordonnées recopiées des commandes passées**, qui sinon videraient le geste de son sens. La commande et ses lignes restent, sans identité.
+
+Le compte garde une adresse et un numéro fictifs plutôt que des champs vides : ces colonnes portent une contrainte d'unicité, et deux comptes anonymisés se heurteraient.
+
+### Ce que les tests ont attrapé
+
+Un bug sérieux, invisible à la lecture : `products.id` et `jerseys.id` n'avaient **pas d'AUTO_INCREMENT**. Le semoir fournissait les identifiants, repris des modules TypeScript, ce qui suffisait tant que le catalogue ne se remplissait que par ce chemin. Dès qu'une création passait par l'administration, l'identifiant 0 était inséré, et la deuxième création heurtait la clé primaire. « Ajouter un produit » aurait échoué au premier essai.
+
+Et un défaut de diagnostic qui masquait le premier : le contrôleur attribuait d'office **toute** violation d'intégrité au slug. Le message parlait d'une adresse en double qui n'existait pas. Un message d'erreur qui devine fait perdre plus de temps qu'il n'en fait gagner ; il vérifie maintenant avant d'accuser.
+
+Deux contaminations entre tests, du même genre : le catalogue et les zones de livraison étaient préservés d'un test à l'autre — ce qui est juste pour une donnée de référence — mais l'administration les modifie. Un test de commande héritait d'une zone renommée par un test de réglages. Les zones tiennent en trois lignes : elles sont désormais réinitialisées à chaque test. Le catalogue, lui, reste préservé et les articles créés sont retirés.
+
+### L'encoche, et pourquoi elle ne se copiait pas telle quelle
+
+La référence montrait un élément actif **découpé dans la barre** : une pastille claire traversant toute la largeur, et la barre se recourbant vers l'intérieur juste au-dessus et juste en dessous. Ces angles concaves n'existent pas en CSS ; on les fabrique avec un pseudo-élément transparent dont une `box-shadow` étalée peint tout sauf un coin arrondi.
+
+La première tentative a reproduit le motif fidèlement — et produit deux languettes blanches qui débordaient dans la zone de contenu. La raison tient à une différence de fond : dans la référence, **la zone de contenu est blanche**, l'épaulement clair de la pastille s'y fond invisiblement. Sur fond sombre, ce même épaulement ressort.
+
+La pastille s'arrête donc au bord, et ce sont les creux sombres qui viennent la pincer. Même silhouette, obtenue par l'inverse. Le reste de l'administration garde les angles vifs du site public : l'encoche devient un accent rare, et non une pièce rapportée d'une autre direction artistique.

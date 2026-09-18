@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, Download, Heart, LogOut, Package, User } from 'lucide-react';
+import { AlertTriangle, Check, Download, Gauge, Heart, LogOut, Package, User } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import SideShoe from './SideShoe';
@@ -111,12 +111,24 @@ export default function EspaceClient() {
             </button>
           ))}
 
+          {/* L'accès n'apparaît que pour un administrateur — et ce lien ne
+              protège rien : chaque route d'API revérifie le drapeau. */}
+          {customer.is_admin && (
+            <Link
+              to="/admin"
+              className="ml-auto flex items-center gap-2 border border-[#EDEFF2]/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#EDEFF2] transition-colors hover:bg-[#EDEFF2] hover:text-[#17191C]"
+            >
+              <Gauge className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Administration
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={() => {
               void logout().then(() => navigate('/'));
             }}
-            className="ml-auto flex items-center gap-2 border border-white/15 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-white/40 hover:text-white"
+            className={`flex items-center gap-2 border border-white/15 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-white/40 hover:text-white ${customer.is_admin ? '' : 'ml-auto'}`}
           >
             <LogOut className="h-3.5 w-3.5" strokeWidth={2.2} />
             Déconnexion

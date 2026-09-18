@@ -55,6 +55,7 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 | `/compte/reinitialiser` | Atterrissage du lien de réinitialisation |
 | `/espace-client` | Commandes, informations, favoris — session requise |
 | `/checkout` | Coordonnées, livraison, paiement, récapitulatif |
+| `/admin` | Administration — session administrateur requise |
 | `/contact` | Formulaire et coordonnées |
 | `/mentions-legales` `/cgv` `/confidentialite` `/cookies` `/livraison-retours` `/authenticite` | Pages légales, gabarit commun |
 
@@ -79,7 +80,8 @@ php migrations/seed.php             # charge le catalogue
 php migrations/run.php --test       # base de test
 php migrations/seed.php --test      # catalogue de test
 php -S localhost:8000 -t public     # l'API
-./vendor/bin/phpunit                # 156 tests
+php bin/admin.php promouvoir <e-mail>   # premier administrateur
+./vendor/bin/phpunit                # 262 tests
 ```
 
 Vite proxie `/api` vers le port 8000 : le navigateur ne voit qu'une origine, donc le cookie de session se comporte en développement comme en production.
@@ -148,6 +150,54 @@ Le défilement automatique **se suspend** pendant le choix d'une taille : voir l
 
 La liste des quatre slugs et les fonds peints à la main vivent dans `Hero.tsx`. Ils passeront en base à la partie administration — c'est pourquoi la liste ne contient que des slugs et rien de recopié.
 
+## Administration
+
+`/admin`, dans le thème du site : fond sombre, Archivo Black, angles vifs. Huit écrans — vue d'ensemble, commandes, sneakers, maillots, clients, messagerie, vitrine, réglages.
+
+### L'accès
+
+Un drapeau `is_admin` sur `customers`, pas un second système d'authentification : sessions, limitation de débit, bcrypt et révocation sont déjà écrits et testés ; les dupliquer doublerait la surface à sécuriser pour une équipe de deux.
+
+Le premier administrateur naît d'une commande sur le serveur, hors du web par construction :
+
+```bash
+php bin/admin.php lister
+php bin/admin.php promouvoir lemaye@exemple.com
+php bin/admin.php retrograder lemaye@exemple.com
+```
+
+Le compte doit exister : on promeut un client, on ne fabrique pas un administrateur — c'est ce qui garantit un mot de passe choisi par lui et jamais transmis. La commande refuse de retirer le dernier accès. Ensuite, un administrateur peut en promouvoir d'autres depuis l'interface.
+
+**La garde est appliquée en un seul point**, dans `App::addAdminRoutes`, et non recopiée au début de chaque méthode : une garde répétée trente fois finit par être oubliée une fois, et cet oubli-là ouvre la boutique. Un test parcourt les vingt-huit routes aux trois niveaux d'accès — visiteur, client, administrateur.
+
+Le drapeau voyage jusqu'au front pour afficher l'entrée du menu, mais ne protège rien : le serveur revérifie à chaque appel.
+
+### Ce que l'administration peut faire
+
+**Commandes** — liste filtrable, recherche par référence, nom ou téléphone, détail complet, et surtout le statut qui avance : en préparation → confirmée → expédiée → livrée, ou annulée. Sans retour en arrière. Une annulation **rend le stock**. La livraison constate le règlement. Le client reçoit un e-mail à chaque étape.
+
+**Catalogue** — créer, modifier, retirer de la vente, corriger le stock taille par taille. L'adresse de la page se déduit du nom : le gérant n'a pas à savoir ce qu'est un slug.
+
+**Visuels** — téléversement depuis le navigateur. Toute image est **ré-encodée** en WebP à 1200 px, jamais recopiée telle quelle. Trois bénéfices d'un geste : un PHP dissimulé dans les octets d'un PNG ne survit pas au décodage ; le poids s'effondre — mesuré, 1 804 Ko → 127 Ko, soit 93 % de moins, transparence conservée ; et tous les visuels finissent au même format. Le dossier refuse par ailleurs d'exécuter quoi que ce soit.
+
+**Clients** — consulter, suspendre, anonymiser. Suspendre ferme les sessions ouvertes sur-le-champ. L'anonymisation est la réponse au droit à l'effacement que promettent déjà les pages légales : nom, adresse, téléphone et favoris disparaissent, **y compris dans les coordonnées recopiées des commandes passées**, mais la commande reste — c'est une pièce comptable, et la clé étrangère l'interdit d'ailleurs.
+
+**Messagerie** — les messages de contact avec leur suivi, les inscrits à la lettre d'information avec export et resynchronisation rejouable vers Brevo.
+
+**Vitrine** — les quatre paires du carrousel d'accueil, dans l'ordre. Un article retiré de la vente ne peut pas y figurer : l'accueil afficherait un vide là où tout le monde regarde en premier.
+
+**Réglages** — coordonnées affichées sur le site, adresse qui reçoit les commandes, tarifs de livraison. Le montant appliqué à une commande est celui enregistré ici, jamais celui envoyé par le navigateur.
+
+**Journal** — une ligne par action. À deux personnes aux commandes, « qui a changé ce prix ? » finit toujours par se poser.
+
+### L'encoche de la barre latérale
+
+L'élément actif n'est pas surligné, il est **découpé dans la barre** : une pastille claire à ras du bord droit, et deux angles concaves qui la pincent. Ces angles n'existent pas en CSS ; on les fabrique avec deux pseudo-éléments transparents dont une `box-shadow` étalée peint la couleur de la barre tout autour d'un coin arrondi — c'est ce vide qui donne le creux.
+
+La référence faisait déborder la pastille sur une zone de contenu **blanche**, où l'épaulement clair se fondait. Sur fond sombre, ce même débordement ressort comme deux languettes. La pastille s'arrête donc au bord, et ce sont les creux sombres qui la pincent : même silhouette, transposée.
+
+Tout le reste garde les angles vifs du site. L'encoche est ainsi un accent rare, et non une pièce rapportée d'une autre direction artistique.
+
 ## Commandes
 
 **Le serveur ne fait confiance à rien de ce que le navigateur envoie sur l'argent.** Le panier transmet quels articles, quelle taille, quelle quantité. Les prix, les frais de livraison et la disponibilité sont relus en base. Sans cela, n'importe qui commande à 0 F en modifiant une requête — et le stock affiché dans le navigateur ne prouve rien.
@@ -210,7 +260,7 @@ backend/
 │   ├── Mailer/             interface + BrevoMailer + LogMailer
 │   └── Controllers/  AuthController.php  FavoritesController.php
 ├── migrations/   001_auth.sql  002_favorites.sql
-└── tests/                  156 tests
+└── tests/                  262 tests
 
 frontend/src/
 ├── components/
@@ -256,7 +306,7 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 2. ~~**Pages client**~~ — faites. Espace client à trois volets, pages des liens e-mail, favoris, verrou avant paiement.
 3. ~~**Commandes**~~ — faites. Catalogue en base, stock réel, lignes figées.
 4. **Agrégateur de paiement** — à choisir (KkiaPay, FedaPay, CinetPay sont les candidats béninois à comparer). Le reste du tunnel l'attend.
-5. **Administration** — lire et faire avancer les commandes, et reprendre la main sur le catalogue et la vitrine d'accueil. Aujourd'hui la boutique n'est prévenue d'aucune commande et aucun statut ne peut changer.
+5. ~~**Administration**~~ — faite. Huit écrans, 28 routes, journal des actions.
 6. **Front sur l'API du catalogue** — remplacer les imports de `src/data/` par des `fetch`, pour que le stock affiché cesse d'être en retard.
 7. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
 8. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
@@ -271,8 +321,6 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Paiement en ligne | Refusé par le serveur, désactivé dans le tunnel. Aucun agrégateur n'est branché. Seul le paiement à la livraison fonctionne — et il fonctionne entièrement. |
 | Téléchargement de facture | Bouton présent et désactivé. Le format n'est pas arrêté. |
 | Stock affiché | Le front lit encore ses modules locaux : après une vente, le nombre affiché peut être en retard. Le serveur, lui, refuse une commande au-delà du stock réel. |
-| Formulaire de contact | Valide et confirme, n'envoie rien. |
-| Lettre d'information | Valide et confirme, **n'enregistre rien**. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
 | Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |

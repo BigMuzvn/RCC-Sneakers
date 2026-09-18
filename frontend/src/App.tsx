@@ -18,6 +18,13 @@ import CartToast from './components/CartToast';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { CartProvider } from './context/CartContext';
+import AdminLayout from './components/admin/AdminLayout';
+import AdminOverview from './components/admin/AdminOverview';
+import AdminOrders from './components/admin/AdminOrders';
+import AdminCatalogue from './components/admin/AdminCatalogue';
+import AdminCustomers from './components/admin/AdminCustomers';
+import AdminInbox from './components/admin/AdminInbox';
+import AdminSettings from './components/admin/AdminSettings';
 import { LEGAL_SLUGS } from './data/legal';
 
 function App() {
@@ -43,6 +50,19 @@ function App() {
               <Route path="/espace-client" element={<EspaceClient />} />
 
               <Route path="/checkout" element={<Checkout />} />
+
+              {/* Administration. La garde vit dans AdminLayout, et surtout
+                  côté serveur : chaque route d'API revérifie le drapeau. */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="commandes" element={<AdminOrders />} />
+                <Route path="produits" element={<AdminCatalogue kind="product" />} />
+                <Route path="maillots" element={<AdminCatalogue kind="jersey" />} />
+                <Route path="clients" element={<AdminCustomers />} />
+                <Route path="messages" element={<AdminInbox />} />
+                <Route path="vitrine" element={<AdminSettings view="vitrine" />} />
+                <Route path="reglages" element={<AdminSettings view="reglages" />} />
+              </Route>
               {LEGAL_SLUGS.map((slug) => (
                 <Route key={slug} path={`/${slug}`} element={<PageLegale slug={slug} />} />
               ))}
