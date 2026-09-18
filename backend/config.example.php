@@ -30,6 +30,14 @@ return [
         'cors_origins' => ['http://localhost:5173'],
     ],
 
+    // Dossier où sont rangés les visuels des articles. Laisser absent garde la
+    // disposition du dépôt — `backend/public/uploads`. À renseigner quand
+    // l'hébergeur impose sa propre racine web et que `src/` n'est plus le
+    // voisin de `public/`.
+    'storage' => [
+        // 'uploads' => __DIR__ . '/api/uploads',
+    ],
+
     'db' => [
         'host' => '127.0.0.1',
         'port' => 3306,

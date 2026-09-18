@@ -4,6 +4,7 @@ namespace Rcc;
 
 use RuntimeException;
 
+
 /**
  * Stockage des visuels produits.
  *
@@ -125,10 +126,19 @@ class ImageStore
         }
     }
 
-    /** Dossier des visuels, créé au besoin. */
+    /**
+     * Dossier des visuels, créé au besoin.
+     *
+     * Le chemin est un réglage, avec pour défaut la disposition du dépôt. Il
+     * était calculé relativement à `src/`, ce qui suppose que `public/` soit
+     * son voisin — vrai ici, faux dès qu'un hébergeur impose sa racine web. Le
+     * jour du déploiement, l'administration aurait cherché les visuels à un
+     * endroit où ils ne sont pas, et les nouveaux envois seraient tombés dans
+     * un dossier que rien ne sert.
+     */
     public static function directory(): string
     {
-        $path = dirname(__DIR__) . '/public/uploads';
+        $path = (string) Config::get('storage.uploads', dirname(__DIR__) . '/public/uploads');
 
         if (!is_dir($path) && !@mkdir($path, 0775, true) && !is_dir($path)) {
             throw new RuntimeException("Le dossier des visuels n'a pas pu être créé.");

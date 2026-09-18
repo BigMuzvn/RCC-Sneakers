@@ -76,5 +76,22 @@
     AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
 </IfModule>
 
+# ------------------------------------------- le code de l'API, s'il est voisin
+#
+# Certains hébergeurs n'offrent aucun dossier au-dessus de la racine web. Le
+# code de l'API se retrouve alors à côté du site, et ces trois règles le
+# ferment. Elles ne coûtent rien là où il est ailleurs : refuser l'accès à un
+# fichier absent n'a aucun effet.
+#
+# Une seconde barrière, pas la première : ces fichiers ne rendent rien quand on
+# les demande — `config.php` retourne un tableau sans l'afficher, et les classes
+# de `src/` ne font que se déclarer. Mais une barrière qui ne sert jamais coûte
+# moins cher qu'une confiance mal placée.
+<FilesMatch "^(autoload|config)\.php$">
+    Require all denied
+</FilesMatch>
+
+RedirectMatch 404 ^/src/
+
 # Le listing d'un dossier ne révèle rien d'utile et beaucoup d'inutile.
 Options -Indexes
