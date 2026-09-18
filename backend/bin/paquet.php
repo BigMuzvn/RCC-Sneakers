@@ -23,8 +23,11 @@
  * explicitement — sans quoi l'API les chercherait à côté de `src/`, où ils ne
  * sont pas.
  *
- * Quatre valeurs restent à renseigner : elles n'appartiennent qu'à
- * l'hébergeur, et les inventer ici ferait échouer le déploiement en silence.
+ * Les valeurs propres à l'hébergement sont lues dans `storage/deploiement.php`,
+ * git-ignoré — les identifiants d'un hébergeur n'ont rien à faire dans le
+ * dépôt. Sans ce fichier, le paquet se fabrique avec des marqueurs bien
+ * visibles : mieux vaut un déploiement qui s'arrête qu'un déploiement qui
+ * tourne avec l'adresse de quelqu'un d'autre.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -101,14 +104,46 @@ $ajouterDossier($backend . '/public', 'htdocs/api');
 
 $cle = (string) Config::get('mail.brevo_key', '');
 
+$fichierCible = $backend . '/storage/deploiement.php';
+$cible = is_file($fichierCible) ? require $fichierCible : [];
+
+$url = trim((string) ($cible['url'] ?? ''));
+$db = ($cible['db'] ?? []) + ['host' => '', 'port' => 3306, 'name' => '', 'user' => '', 'pass' => ''];
+
+/** Ce qui manque est nommé, jamais deviné. */
+$manquants = [];
+
+foreach (['url' => $url, 'db.host' => $db['host'], 'db.name' => $db['name'], 'db.user' => $db['user']] as $quoi => $valeur) {
+    if ((string) $valeur === '') {
+        $manquants[] = $quoi;
+    }
+}
+
+$lignesDb = sprintf(
+    "        'host' => %s
+        'port' => %d,
+        'name' => %s
+        'user' => %s
+        'pass' => %s",
+    $db['host'] !== '' ? var_export($db['host'], true) . ',' : "'sqlXXX.hebergeur.com',  // << À REMPLIR >>",
+    (int) $db['port'],
+    $db['name'] !== '' ? var_export($db['name'], true) . ',' : "'nom_de_la_base',  // << À REMPLIR >>",
+    $db['user'] !== '' ? var_export($db['user'], true) . ',' : "'utilisateur',  // << À REMPLIR >>",
+    var_export((string) $db['pass'], true) . ','
+);
+
+$ligneUrl = $url !== ''
+    ? var_export($url, true) . ','
+    : "'https://exemple.infinityfreeapp.com',  // << À REMPLIR >>";
+
 $config = <<<PHP
 <?php
 
 /**
- * Configuration du site en ligne.
+ * Configuration du site en ligne, fabriquée par bin/paquet.php.
  *
- * Quatre valeurs sont à renseigner, marquées ci-dessous. Elles appartiennent à
- * l'hébergeur : les inventer ferait échouer le déploiement sans rien dire.
+ * Ce qui reste marqué « À REMPLIR » appartient à l'hébergeur : l'inventer
+ * ferait échouer le déploiement sans rien dire.
  */
 
 return [
@@ -116,11 +151,11 @@ return [
         'env'   => 'production',
         'debug' => false,
 
-        // << À REMPLIR >> l'adresse publique du site, sans barre finale.
-        // C'est elle qui fabrique les liens des e-mails : laissée fausse,
-        // aucune vérification d'adresse ni réinitialisation de mot de passe
-        // n'aboutira, et rien ne le signalera.
-        'url'   => 'https://exemple.infinityfreeapp.com',
+        // L'adresse publique du site, sans barre finale. C'est elle qui
+        // fabrique les liens des e-mails : fausse, aucune vérification
+        // d'adresse ni réinitialisation de mot de passe n'aboutira, et rien
+        // ne le signalera.
+        'url'   => {$ligneUrl}
 
         // Vides : le site et l'API partagent le domaine.
         'trusted_proxies' => [],
@@ -135,11 +170,7 @@ return [
     ],
 
     'db' => [
-        'host' => 'sqlXXX.infinityfree.com',  // << À REMPLIR >>
-        'port' => 3306,
-        'name' => 'ifX_XXXXXXX_rcc',          // << À REMPLIR >>
-        'user' => 'ifX_XXXXXXX',              // << À REMPLIR >>
-        'pass' => '',                         // << À REMPLIR >>
+{$lignesDb}
     ],
 
     'session' => [
@@ -184,4 +215,9 @@ printf("Archive : %s\n", $destination);
 printf("Poids   : %s Ko (%d fichiers)\n\n", number_format(filesize($destination) / 1024, 1, ',', ' '), $compte);
 printf("Visuels emportés : %d\n", count(glob($backend . '/public/uploads/*.webp') ?: []));
 printf("Base emportée    : %s\n", $exports === [] ? 'AUCUNE — lancez bin/exporter.php' : basename($exports[0]));
-echo "\nQuatre valeurs restent à renseigner dans htdocs/config.php avant l'envoi.\n";
+if ($manquants === []) {
+    echo "\nConfiguration complète : rien à renseigner avant l'envoi.\n";
+} else {
+    echo "\nÀ renseigner dans htdocs/config.php avant l'envoi : " . implode(', ', $manquants) . "\n";
+    echo "(ou dans storage/deploiement.php, puis refabriquer le paquet)\n";
+}
