@@ -54,10 +54,25 @@ abstract class ApiTestCase extends DatabaseTestCase
      * Pas de reconnexion nécessaire après la promotion : la garde relit la
      * ligne du client à chaque requête, elle voit donc le drapeau aussitôt.
      */
+    /**
+     * Le gérant : super administrateur, qui peut tout.
+     *
+     * C'est le rang de celui qui tient la boutique, et donc celui que la
+     * plupart des tests veulent dire par « administrateur ».
+     */
     protected function loginAsAdmin(string $email = 'admin@exemple.com', string $phone = '0197000099'): int
     {
         $id = $this->openSession('Administrateur RCC', $email, $phone);
-        \Rcc\Database::run('UPDATE customers SET is_admin = 1 WHERE id = ?', [$id]);
+        \Rcc\Database::run('UPDATE customers SET is_admin = 1, is_super_admin = 1 WHERE id = ?', [$id]);
+
+        return $id;
+    }
+
+    /** Un administrateur ajouté : tout sauf les réglages et les accès. */
+    protected function loginAsSubAdmin(string $email = 'second@exemple.com', string $phone = '0197000098'): int
+    {
+        $id = $this->openSession('Second Administrateur', $email, $phone);
+        \Rcc\Database::run('UPDATE customers SET is_admin = 1, is_super_admin = 0 WHERE id = ?', [$id]);
 
         return $id;
     }

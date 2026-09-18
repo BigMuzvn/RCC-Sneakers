@@ -26,6 +26,9 @@ import AdminCatalogue from './components/admin/AdminCatalogue';
 import AdminCustomers from './components/admin/AdminCustomers';
 import AdminInbox from './components/admin/AdminInbox';
 import AdminSettings from './components/admin/AdminSettings';
+import AdminAdmins from './components/admin/AdminAdmins';
+import AdminAccount from './components/admin/AdminAccount';
+import SuperAdminRoute from './components/admin/SuperAdminRoute';
 import { LEGAL_SLUGS } from './data/legal';
 
 function App() {
@@ -64,7 +67,27 @@ function App() {
                   <Route path="clients" element={<AdminCustomers />} />
                   <Route path="messages" element={<AdminInbox />} />
                   <Route path="vitrine" element={<AdminSettings view="vitrine" />} />
-                  <Route path="reglages" element={<AdminSettings view="reglages" />} />
+                  {/* Sans entrée de menu : on y arrive par son nom, en bas de
+                      la barre latérale. Ouvert à tout administrateur. */}
+                  <Route path="compte" element={<AdminAccount />} />
+                  {/* Réservés au super administrateur. La garde est ici pour
+                      l'écran ; les routes d'API la refont pour de bon. */}
+                  <Route
+                    path="administrateurs"
+                    element={
+                      <SuperAdminRoute>
+                        <AdminAdmins />
+                      </SuperAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="reglages"
+                    element={
+                      <SuperAdminRoute>
+                        <AdminSettings view="reglages" />
+                      </SuperAdminRoute>
+                    }
+                  />
                 </Route>
                 {LEGAL_SLUGS.map((slug) => (
                   <Route key={slug} path={`/${slug}`} element={<PageLegale slug={slug} />} />

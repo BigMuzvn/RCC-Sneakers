@@ -81,7 +81,7 @@ php bin/visuels.php                 # importe les rendus du dépôt dans les vis
 php migrations/run.php --test       # base de test
 php migrations/seed.php --test      # catalogue de test
 php -S localhost:8000 -t public     # l'API
-php bin/admin.php promouvoir <e-mail>   # premier administrateur
+php bin/admin.php super <e-mail>        # le super administrateur
 ./vendor/bin/phpunit                # 262 tests
 ```
 
@@ -153,21 +153,34 @@ La liste des quatre slugs et les fonds peints à la main vivent dans `Hero.tsx`.
 
 ## Administration
 
-`/admin`, dans le thème du site : fond sombre, Archivo Black, angles vifs. Huit écrans — vue d'ensemble, commandes, sneakers, maillots, clients, messagerie, vitrine, réglages.
+`/admin`, dans le thème du site : fond sombre, Archivo Black, angles vifs. Neuf écrans — vue d'ensemble, commandes, sneakers, maillots, clients, messagerie, vitrine, administrateurs, réglages — plus « mon compte », accessible sous son nom en bas de la barre.
 
 ### L'accès
 
 Un drapeau `is_admin` sur `customers`, pas un second système d'authentification : sessions, limitation de débit, bcrypt et révocation sont déjà écrits et testés ; les dupliquer doublerait la surface à sécuriser pour une équipe de deux.
 
+### Deux rangs
+
+`is_super_admin` désigne **un seul compte** : celui qui distribue les accès et règle la boutique. Les administrateurs qu'il ajoute tiennent les commandes, le catalogue, les clients, la messagerie et la vitrine — tout le travail quotidien — mais n'atteignent ni l'écran « Administrateurs » ni les « Réglages ». Sans cette séparation, le premier accès distribué permettrait d'en distribuer d'autres, puis de retirer le sien à celui qui l'a donné.
+
+La lecture des réglages reste commune, parce que la vitrine en dépend, mais elle **ne rend au second rang que ce que ses écrans affichent** : ni les coordonnées de la boutique, ni les tarifs de livraison. Masquer un champ dans le navigateur ne le protège de rien.
+
+Ajouter un administrateur suit deux chemins selon que l'adresse est connue. Un client existant est **promu**, avec son mot de passe habituel et sans qu'aucun message ne parte. Une adresse inconnue donne lieu à un compte créé sans mot de passe utilisable, et à une invitation qui laisse la personne **choisir le sien** : à aucun moment un mot de passe n'est fabriqué par le gérant ni transmis par message. Retirer un accès ferme les sessions ouvertes sur-le-champ — sans cela, l'onglet resté ouvert dans l'arrière-boutique continuerait d'administrer.
+
+**Le super administrateur ne se retire pas depuis le web**, seulement depuis le serveur : `php bin/admin.php super <e-mail>` déplace le rang, et le dit explicitement, puisque cette commande décide qui garde la main sur la boutique.
+
+**Les administrateurs ne sont pas des clients.** Ils ont quitté l'écran « Clients », qui redevient ce qu'il annonce, ainsi que les compteurs de la vue d'ensemble : on suspend un client, on retire un accès à un administrateur — deux gestes différents sur deux populations différentes. Chaque administrateur garde en revanche son propre écran « Mon compte », seul endroit où changer son mot de passe depuis que l'espace client leur est fermé.
+
 Le premier administrateur naît d'une commande sur le serveur, hors du web par construction :
 
 ```bash
 php bin/admin.php lister
-php bin/admin.php promouvoir lemaye@exemple.com
-php bin/admin.php retrograder lemaye@exemple.com
+php bin/admin.php super lemaye@exemple.com
+php bin/admin.php promouvoir vendeur@exemple.com
+php bin/admin.php retrograder vendeur@exemple.com
 ```
 
-Le compte doit exister : on promeut un client, on ne fabrique pas un administrateur — c'est ce qui garantit un mot de passe choisi par lui et jamais transmis. La commande refuse de retirer le dernier accès. Ensuite, un administrateur peut en promouvoir d'autres depuis l'interface.
+Le compte doit exister : on promeut un client, on ne fabrique pas un administrateur — c'est ce qui garantit un mot de passe choisi par lui et jamais transmis. La commande refuse de retirer le dernier accès, et refuse de rétrograder le super administrateur sans qu'un remplaçant ait été désigné. Ensuite, c'est depuis l'interface que les accès suivants se distribuent.
 
 **La garde est appliquée en un seul point**, dans `App::addAdminRoutes`, et non recopiée au début de chaque méthode : une garde répétée trente fois finit par être oubliée une fois, et cet oubli-là ouvre la boutique. Un test parcourt les vingt-huit routes aux trois niveaux d'accès — visiteur, client, administrateur.
 

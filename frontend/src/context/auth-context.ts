@@ -9,6 +9,8 @@ export type Customer = {
   email_verified: boolean;
   /** Affiche l'accès à l'administration. Ne protège rien : le serveur revérifie. */
   is_admin: boolean;
+  /** Décide ce que la barre latérale montre. Les routes correspondantes revérifient le rang. */
+  is_super_admin: boolean;
   created_at: string;
 };
 

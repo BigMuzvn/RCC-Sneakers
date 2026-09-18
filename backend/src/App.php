@@ -104,6 +104,27 @@ class App
             };
         };
 
+        /**
+         * Même garde, un cran plus haut : réservé au super administrateur.
+         *
+         * Ce qui passe par ici est exactement ce qu'un administrateur ajouté ne
+         * doit pas pouvoir faire — se donner des droits, en retirer à celui qui
+         * lui en a donné, ou changer les coordonnées de la boutique.
+         */
+        $guardSuper = static function (callable $handler) use ($auth): callable {
+            return static function (Request $request, string ...$params) use ($auth, $handler): Response {
+                $admin = $auth->superAdmin();
+
+                if ($admin !== null) {
+                    return $handler($request, $admin, ...$params);
+                }
+
+                return $auth->id() === null
+                    ? Response::unauthorized()
+                    : Response::forbidden("Cette partie est réservée au super administrateur.");
+            };
+        };
+
         $dashboard = new Admin\DashboardController();
         $router->add('GET', '/admin/overview', $guard([$dashboard, 'overview']));
         $router->add('GET', '/admin/log', $guard([$dashboard, 'log']));
@@ -129,7 +150,6 @@ class App
         $router->add('GET', '/admin/customers/{id}', $guard([$customers, 'show']));
         $router->add('POST', '/admin/customers/{id}/status', $guard([$customers, 'updateStatus']));
         $router->add('POST', '/admin/customers/{id}/anonymise', $guard([$customers, 'anonymise']));
-        $router->add('POST', '/admin/customers/{id}/role', $guard([$customers, 'updateRole']));
 
         $inbox = new Admin\InboxController($this->contacts);
         $router->add('GET', '/admin/messages', $guard([$inbox, 'messages']));
@@ -138,11 +158,21 @@ class App
         $router->add('POST', '/admin/newsletter/{id}/unsubscribe', $guard([$inbox, 'unsubscribe']));
         $router->add('POST', '/admin/newsletter/sync', $guard([$inbox, 'sync']));
 
+        // La vitrine est ouverte à tous les administrateurs ; les coordonnées de
+        // la boutique et les tarifs de livraison ne le sont pas. La lecture reste
+        // commune, mais elle ne rend au second rang que ce que ses écrans
+        // affichent — cacher un champ dans le navigateur ne le protège pas.
         $settings = new Admin\SettingsController();
         $router->add('GET', '/admin/settings', $guard([$settings, 'index']));
-        $router->add('POST', '/admin/settings', $guard([$settings, 'update']));
         $router->add('POST', '/admin/featured', $guard([$settings, 'updateFeatured']));
-        $router->add('POST', '/admin/delivery-zones/{id}', $guard([$settings, 'updateZone']));
+        $router->add('POST', '/admin/settings', $guardSuper([$settings, 'update']));
+        $router->add('POST', '/admin/delivery-zones/{id}', $guardSuper([$settings, 'updateZone']));
+
+        $admins = new Admin\AdminsController($this->mailer);
+        $router->add('GET', '/admin/admins', $guardSuper([$admins, 'index']));
+        $router->add('POST', '/admin/admins', $guardSuper([$admins, 'store']));
+        $router->add('POST', '/admin/admins/{id}/revoke', $guardSuper([$admins, 'revoke']));
+        $router->add('POST', '/admin/admins/{id}/resend', $guardSuper([$admins, 'resend']));
     }
 
     /** Liste de contacts de la lettre d'information. */

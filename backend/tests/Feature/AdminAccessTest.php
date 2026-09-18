@@ -36,22 +36,38 @@ class AdminAccessTest extends ApiTestCase
             ['GET', '/admin/customers/1'],
             ['POST', '/admin/customers/1/status'],
             ['POST', '/admin/customers/1/anonymise'],
-            ['POST', '/admin/customers/1/role'],
             ['GET', '/admin/messages'],
             ['POST', '/admin/messages/1/status'],
             ['GET', '/admin/newsletter'],
             ['POST', '/admin/newsletter/1/unsubscribe'],
             ['POST', '/admin/newsletter/sync'],
             ['GET', '/admin/settings'],
-            ['POST', '/admin/settings'],
             ['POST', '/admin/featured'],
+        ];
+    }
+
+    /**
+     * Les routes du seul super administrateur : distribuer des accès, régler la
+     * boutique. Elles sont listées à part parce qu'elles ont un troisième
+     * niveau de refus — un administrateur ordinaire s'y voit fermer la porte.
+     *
+     * @return array<int,array{0:string,1:string}>
+     */
+    private function routesSuper(): array
+    {
+        return [
+            ['POST', '/admin/settings'],
             ['POST', '/admin/delivery-zones/cotonou'],
+            ['GET', '/admin/admins'],
+            ['POST', '/admin/admins'],
+            ['POST', '/admin/admins/1/revoke'],
+            ['POST', '/admin/admins/1/resend'],
         ];
     }
 
     public function test_aucune_route_dadministration_nest_ouverte_aux_visiteurs(): void
     {
-        foreach ($this->routes() as [$method, $path]) {
+        foreach ([...$this->routes(), ...$this->routesSuper()] as [$method, $path]) {
             $response = $this->request($method, $path);
 
             $this->assertSame(401, $response->status, "{$method} {$path} devait exiger une session");
@@ -67,7 +83,7 @@ class AdminAccessTest extends ApiTestCase
     {
         $this->loginAsCustomer();
 
-        foreach ($this->routes() as [$method, $path]) {
+        foreach ([...$this->routes(), ...$this->routesSuper()] as [$method, $path]) {
             $response = $this->request($method, $path);
 
             $this->assertSame(403, $response->status, "{$method} {$path} devait être refusée à un client");
@@ -83,12 +99,57 @@ class AdminAccessTest extends ApiTestCase
     {
         $this->loginAsAdmin();
 
-        foreach ($this->routes() as [$method, $path]) {
+        foreach ([...$this->routes(), ...$this->routesSuper()] as [$method, $path]) {
             $response = $this->request($method, $path);
 
             $this->assertNotSame(401, $response->status, "{$method} {$path} refusait l'administrateur");
             $this->assertNotSame(403, $response->status, "{$method} {$path} refusait l'administrateur");
         }
+    }
+
+    /**
+     * Le second rang, celui des administrateurs ajoutés.
+     *
+     * Il passe partout où travaille la boutique, et nulle part où l'on
+     * distribue des droits. C'est le test qui empêche la séparation d'exister
+     * seulement dans la barre latérale.
+     */
+    public function test_un_administrateur_ajoute_travaille_mais_ne_distribue_rien(): void
+    {
+        $this->loginAsSubAdmin();
+
+        foreach ($this->routes() as [$method, $path]) {
+            $response = $this->request($method, $path);
+
+            $this->assertNotSame(401, $response->status, "{$method} {$path} refusait un administrateur");
+            $this->assertNotSame(403, $response->status, "{$method} {$path} refusait un administrateur");
+        }
+
+        foreach ($this->routesSuper() as [$method, $path]) {
+            $response = $this->request($method, $path);
+
+            $this->assertSame(
+                403,
+                $response->status,
+                "{$method} {$path} devait être réservée au super administrateur"
+            );
+        }
+    }
+
+    /**
+     * La lecture des réglages reste commune — la vitrine en dépend — mais elle
+     * ne rend au second rang que ce que ses écrans affichent. Masquer un champ
+     * dans le navigateur ne le protège de rien.
+     */
+    public function test_les_reglages_lus_par_le_second_rang_sont_vides_de_leur_substance(): void
+    {
+        $this->loginAsSubAdmin();
+
+        $payload = $this->get('/admin/settings')->payload['data'];
+
+        $this->assertSame([], $payload['settings'], 'les coordonnées ne doivent pas sortir');
+        $this->assertSame([], $payload['delivery_zones'], 'les tarifs ne doivent pas sortir');
+        $this->assertArrayHasKey('featured', $payload, 'la vitrine, elle, reste lisible');
     }
 
     /**

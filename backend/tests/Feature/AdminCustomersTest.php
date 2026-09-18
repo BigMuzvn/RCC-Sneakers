@@ -25,7 +25,9 @@ class AdminCustomersTest extends ApiTestCase
         $response = $this->get('/admin/customers');
 
         $this->assertSame(200, $response->status);
-        $this->assertCount(2, $response->payload['data']['customers']);
+        // Le gérant a lui aussi un compte, mais il n'est pas un client : seul
+        // le client créé au départ doit figurer ici.
+        $this->assertCount(1, $response->payload['data']['customers']);
 
         $client = array_values(array_filter(
             $response->payload['data']['customers'],
@@ -34,7 +36,37 @@ class AdminCustomersTest extends ApiTestCase
 
         $this->assertSame(0, $client['orders_count']);
         $this->assertSame(0, $client['spent_xof']);
-        $this->assertFalse($client['is_admin']);
+    }
+
+    /**
+     * Cet écran ne montre que des clients.
+     *
+     * Les administrateurs y figuraient, avec une pastille « Admin » et un
+     * bouton pour en promouvoir d'autres : deux populations mêlées, alors
+     * qu'on suspend un client et qu'on retire un accès à un administrateur.
+     * Ils ont maintenant leur propre écran.
+     */
+    public function test_les_administrateurs_ne_figurent_pas_parmi_les_clients(): void
+    {
+        $liste = $this->get('/admin/customers')->payload['data']['customers'];
+        $adresses = array_column($liste, 'email');
+
+        $this->assertContains('client@exemple.com', $adresses);
+        $this->assertNotContains('admin@exemple.com', $adresses, "le gérant n'est pas un client");
+
+        $this->loginAsSubAdmin();
+        $this->loginAsAdmin();
+
+        $adresses = array_column($this->get('/admin/customers')->payload['data']['customers'], 'email');
+        $this->assertNotContains('second@exemple.com', $adresses);
+    }
+
+    /** Et la fiche d'un administrateur ne s'ouvre pas non plus depuis ici. */
+    public function test_la_fiche_d_un_administrateur_ne_s_ouvre_pas_depuis_les_clients(): void
+    {
+        $moi = (int) Database::first("SELECT id FROM customers WHERE email = 'admin@exemple.com'")['id'];
+
+        $this->assertSame(404, $this->get("/admin/customers/{$moi}")->status);
     }
 
     public function test_la_recherche_trouve_par_nom_email_et_telephone(): void
@@ -94,7 +126,7 @@ class AdminCustomersTest extends ApiTestCase
     {
         $moi = (int) Database::first("SELECT id FROM customers WHERE email = 'admin@exemple.com'")['id'];
 
-        foreach (['status' => ['status' => 'suspended'], 'anonymise' => [], 'role' => ['is_admin' => false]] as $action => $corps) {
+        foreach (['status' => ['status' => 'suspended'], 'anonymise' => []] as $action => $corps) {
             $response = $this->post("/admin/customers/{$moi}/{$action}", $corps);
 
             $this->assertSame(422, $response->status, "« {$action} » sur soi-même aurait dû être refusé");
@@ -181,34 +213,6 @@ class AdminCustomersTest extends ApiTestCase
         $this->assertSame(0, (int) Database::first(
             "SELECT COUNT(*) c FROM newsletter_subscribers WHERE email = 'client@exemple.com'"
         )['c']);
-    }
-
-    // --------------------------------------------------------- rôle
-
-    public function test_un_client_se_promeut_administrateur(): void
-    {
-        $response = $this->post("/admin/customers/{$this->clientId}/role", ['is_admin' => true]);
-
-        $this->assertSame(200, $response->status);
-        $this->assertSame(1, (int) Database::first('SELECT is_admin FROM customers WHERE id = ?', [$this->clientId])['is_admin']);
-    }
-
-    public function test_un_administrateur_se_retrograde(): void
-    {
-        $this->post("/admin/customers/{$this->clientId}/role", ['is_admin' => true]);
-        $response = $this->post("/admin/customers/{$this->clientId}/role", ['is_admin' => false]);
-
-        $this->assertSame(200, $response->status);
-        $this->assertSame(0, (int) Database::first('SELECT is_admin FROM customers WHERE id = ?', [$this->clientId])['is_admin']);
-    }
-
-    public function test_un_compte_suspendu_ne_peut_pas_administrer(): void
-    {
-        $this->post("/admin/customers/{$this->clientId}/status", ['status' => 'suspended']);
-
-        $response = $this->post("/admin/customers/{$this->clientId}/role", ['is_admin' => true]);
-
-        $this->assertSame(422, $response->status);
     }
 
     public function test_les_actions_sur_un_client_sont_journalisees(): void

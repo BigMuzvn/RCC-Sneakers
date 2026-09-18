@@ -64,8 +64,13 @@ class SettingsController
             $fiches = array_column($rows, null, 'slug');
         }
 
+        // Le second rang n'a accès qu'à la vitrine. Il lit donc la même route,
+        // mais n'en reçoit ni les coordonnées de la boutique ni les tarifs :
+        // masquer un champ dans le navigateur ne le protège de rien.
+        $super = (int) ($admin['is_super_admin'] ?? 0) === 1;
+
         return Response::data([
-            'settings' => array_map(
+            'settings' => !$super ? [] : array_map(
                 static fn (string $name) => [
                     'name' => $name,
                     'label' => self::EDITABLE[$name]['label'],
@@ -94,7 +99,7 @@ class SettingsController
 
             'featured_count' => self::FEATURED_COUNT,
 
-            'delivery_zones' => array_map(static fn (array $z) => [
+            'delivery_zones' => !$super ? [] : array_map(static fn (array $z) => [
                 'id' => $z['id'],
                 'label' => $z['label'],
                 'delay_label' => $z['delay_label'],

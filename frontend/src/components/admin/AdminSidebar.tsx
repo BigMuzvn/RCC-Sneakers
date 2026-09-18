@@ -6,6 +6,7 @@ import {
   Mail,
   Package,
   Settings,
+  Shield,
   Shirt,
   Store,
   Users,
@@ -21,7 +22,13 @@ export const ADMIN_LINKS = [
   { to: '/admin/clients', label: 'Clients', icon: Users },
   { to: '/admin/messages', label: 'Messagerie', icon: Mail, badge: 'messages' },
   { to: '/admin/vitrine', label: 'Vitrine', icon: Store },
-  { to: '/admin/reglages', label: 'Réglages', icon: Settings },
+  // Les deux derniers n'appartiennent qu'au super administrateur : distribuer
+  // les accès et régler la boutique. Les masquer ne protège rien — chaque route
+  // correspondante revérifie le rang côté serveur — mais montrer une porte
+  // fermée à quelqu'un qui travaille ici tous les jours est une petite vexation
+  // quotidienne.
+  { to: '/admin/administrateurs', label: 'Administrateurs', icon: Shield, superOnly: true },
+  { to: '/admin/reglages', label: 'Réglages', icon: Settings, superOnly: true },
 ] as const;
 
 type Props = {
@@ -59,7 +66,9 @@ export default function AdminSidebar({ badges = {}, onNavigate }: Props) {
       </div>
 
       <ul className="mt-2 flex-1 overflow-y-auto">
-        {ADMIN_LINKS.map(({ to, label, icon: Icon, ...rest }) => {
+        {ADMIN_LINKS.filter(
+          (lien) => !('superOnly' in lien) || customer?.is_super_admin === true,
+        ).map(({ to, label, icon: Icon, ...rest }) => {
           const badge = 'badge' in rest ? badges[rest.badge as 'orders' | 'messages'] : undefined;
 
           return (
@@ -124,8 +133,15 @@ export default function AdminSidebar({ badges = {}, onNavigate }: Props) {
       </ul>
 
       <div className="border-t border-white/10 px-6 py-5">
-        <p className="truncate text-[11px] text-white/70">{customer?.name}</p>
-        <p className="mt-0.5 truncate text-[10px] text-white/35">{customer?.email}</p>
+        {/* Son propre compte se trouve sous son nom, là où on le cherche —
+            et non dans les réglages, qui n'appartiennent qu'au premier. */}
+        <NavLink to="/admin/compte" onClick={onNavigate} className="block">
+          <p className="truncate text-[11px] text-white/70 transition-colors hover:text-white">{customer?.name}</p>
+          <p className="mt-0.5 truncate text-[10px] text-white/35">{customer?.email}</p>
+          <p className="mt-1.5 text-[9px] uppercase tracking-[0.16em] text-white/25">
+            {customer?.is_super_admin ? 'Super administrateur' : 'Administrateur'}
+          </p>
+        </NavLink>
 
         <div className="mt-4 flex flex-col gap-2">
           <NavLink

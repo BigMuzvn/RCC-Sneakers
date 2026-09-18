@@ -55,12 +55,15 @@ class DashboardController
                 )['t'] ?? 0),
             ],
 
+            // Comme l'écran « Clients », ces compteurs ne portent que sur des
+            // clients : compter les administrateurs parmi eux gonflerait le
+            // chiffre dont dépend la lecture de l'activité.
             'customers' => [
-                'total' => $this->count("SELECT COUNT(*) c FROM customers WHERE status = 'active'"),
+                'total' => $this->count("SELECT COUNT(*) c FROM customers WHERE status = 'active' AND is_admin = 0"),
                 'unverified' => $this->count(
-                    "SELECT COUNT(*) c FROM customers WHERE status = 'active' AND email_verified_at IS NULL"
+                    "SELECT COUNT(*) c FROM customers WHERE status = 'active' AND is_admin = 0 AND email_verified_at IS NULL"
                 ),
-                'last_30d' => $this->count('SELECT COUNT(*) c FROM customers WHERE created_at > ?', [$month]),
+                'last_30d' => $this->count('SELECT COUNT(*) c FROM customers WHERE is_admin = 0 AND created_at > ?', [$month]),
             ],
 
             'inbox' => [

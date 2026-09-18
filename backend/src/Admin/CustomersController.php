@@ -23,7 +23,11 @@ class CustomersController
     /** @param array<string,mixed> $admin */
     public function index(Request $request, array $admin): Response
     {
-        $where = [];
+        // Les administrateurs ne sont pas des clients. Les laisser ici mêlait
+        // deux populations qui n'ont ni le même usage ni les mêmes gestes : on
+        // suspend un client, on retire un accès à un administrateur. Ils ont
+        // leur propre écran.
+        $where = ['c.is_admin = 0'];
         $params = [];
 
         $search = trim((string) $request->input('search', ''));
@@ -53,7 +57,7 @@ class CustomersController
         // c'est ce qui distingue un client fidèle d'un compte dormant, et le
         // calculer après coup ferait une requête par ligne.
         $rows = Database::run(
-            "SELECT c.id, c.name, c.email, c.phone_display, c.status, c.is_admin,
+            "SELECT c.id, c.name, c.email, c.phone_display, c.status,
                     c.email_verified_at, c.created_at,
                     COUNT(o.id) AS orders_count,
                     COALESCE(SUM(CASE WHEN o.status <> 'cancelled' THEN o.total_xof ELSE 0 END), 0) AS spent_xof
@@ -73,7 +77,6 @@ class CustomersController
                 'email' => $r['email'],
                 'phone' => $r['phone_display'],
                 'status' => $r['status'],
-                'is_admin' => (int) $r['is_admin'] === 1,
                 'email_verified' => $r['email_verified_at'] !== null,
                 'orders_count' => (int) $r['orders_count'],
                 'spent_xof' => (int) $r['spent_xof'],
@@ -91,7 +94,7 @@ class CustomersController
     /** @param array<string,mixed> $admin */
     public function show(Request $request, array $admin, string $id): Response
     {
-        $customer = Database::first('SELECT * FROM customers WHERE id = ?', [(int) $id]);
+        $customer = Database::first('SELECT * FROM customers WHERE id = ? AND is_admin = 0', [(int) $id]);
 
         if ($customer === null) {
             return Response::notFound("Ce client n'existe pas.");
@@ -254,44 +257,6 @@ class CustomersController
         AdminLog::record($admin, 'customer.anonymise', $customer['email'], 'droit à l’effacement');
 
         return Response::data(['status' => 'anonymised']);
-    }
-
-    /** @param array<string,mixed> $admin */
-    public function updateRole(Request $request, array $admin, string $id): Response
-    {
-        $customer = $this->modifiable($admin, (int) $id);
-
-        if ($customer instanceof Response) {
-            return $customer;
-        }
-
-        $veutAdmin = in_array($request->input('is_admin'), [true, 1, '1', 'true'], true);
-
-        if ($customer['status'] !== 'active') {
-            return Response::validation(['is_admin' => "Un compte qui n'est pas actif ne peut pas administrer."]);
-        }
-
-        if (!$veutAdmin) {
-            $restants = (int) Database::first(
-                'SELECT COUNT(*) c FROM customers WHERE is_admin = 1 AND id <> ?',
-                [$customer['id']]
-            )['c'];
-
-            // Retirer le dernier accès fermerait l'administration à tout le
-            // monde, sans autre recours qu'une commande sur le serveur.
-            if ($restants === 0) {
-                return Response::validation(['is_admin' => 'Impossible : ce serait le dernier administrateur.']);
-            }
-        }
-
-        Database::run(
-            'UPDATE customers SET is_admin = ?, updated_at = ? WHERE id = ?',
-            [$veutAdmin ? 1 : 0, Database::now(), $customer['id']]
-        );
-
-        AdminLog::record($admin, 'customer.role', $customer['email'], $veutAdmin ? 'promu administrateur' : 'rétrogradé');
-
-        return Response::data(['is_admin' => $veutAdmin]);
     }
 
     // ------------------------------------------------------------- privé

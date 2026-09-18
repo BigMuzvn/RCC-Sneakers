@@ -36,7 +36,8 @@ $sortie = static function (string $message, int $code = 0): never {
 switch ($commande) {
     case 'lister':
         $admins = Database::run(
-            'SELECT id, name, email, status FROM customers WHERE is_admin = 1 ORDER BY id'
+            'SELECT id, name, email, status, is_super_admin FROM customers
+              WHERE is_admin = 1 ORDER BY is_super_admin DESC, id'
         )->fetchAll();
 
         if ($admins === []) {
@@ -46,10 +47,56 @@ switch ($commande) {
         echo count($admins) . " administrateur(s) :\n";
 
         foreach ($admins as $a) {
-            printf("  #%-3d %-30s %-24s %s\n", $a['id'], $a['email'], $a['name'], $a['status']);
+            printf("  #%-3d %-30s %-24s %s\n", $a['id'], $a['email'], $a['name'], $a['status'] . ((int) $a['is_super_admin'] === 1 ? '  SUPER' : ''));
         }
 
         break;
+
+    /**
+     * Désigne le super administrateur.
+     *
+     * Le rang est **unique** : le désigner ailleurs le retire à qui l'avait.
+     * C'est annoncé plutôt que fait en silence — cette commande décide qui
+     * garde la main sur la boutique.
+     */
+    case 'super':
+        if ($email === null) {
+            $sortie('Adresse manquante : php bin/admin.php super <e-mail>', 1);
+        }
+
+        $customer = Database::first(
+            'SELECT id, name, email, status, is_super_admin FROM customers WHERE email = ?',
+            [$email]
+        );
+
+        if ($customer === null) {
+            $sortie("Aucun compte pour « {$email} ».", 1);
+        }
+
+        if ((int) $customer['is_super_admin'] === 1) {
+            $sortie("{$email} est déjà super administrateur.");
+        }
+
+        if ($customer['status'] !== 'active') {
+            $sortie("Refus : le compte « {$email} » n'est pas actif.", 1);
+        }
+
+        $ancien = Database::first('SELECT email FROM customers WHERE is_super_admin = 1');
+
+        Database::run(
+            'UPDATE customers SET is_super_admin = 0, updated_at = ? WHERE is_super_admin = 1',
+            [Database::now()]
+        );
+        Database::run(
+            'UPDATE customers SET is_admin = 1, is_super_admin = 1, updated_at = ? WHERE id = ?',
+            [Database::now(), $customer['id']]
+        );
+
+        $sortie($ancien === null
+            ? "{$customer['name']} ({$email}) est désormais super administrateur."
+            : "{$customer['name']} ({$email}) est désormais super administrateur. {$ancien['email']} redevient administrateur ordinaire.");
+
+        // no break — $sortie termine le script
 
     case 'promouvoir':
     case 'retrograder':
@@ -57,7 +104,10 @@ switch ($commande) {
             $sortie("Adresse manquante : php bin/admin.php {$commande} <e-mail>", 1);
         }
 
-        $customer = Database::first('SELECT id, name, email, is_admin FROM customers WHERE email = ?', [$email]);
+        $customer = Database::first(
+            'SELECT id, name, email, is_admin, is_super_admin FROM customers WHERE email = ?',
+            [$email]
+        );
 
         if ($customer === null) {
             // Le compte doit exister : on promeut un client, on ne crée pas un
@@ -75,6 +125,13 @@ switch ($commande) {
         }
 
         if ($vers === 0) {
+            // Le super administrateur ne se rétrograde pas : il se remplace.
+            // Sans ce refus, la boutique garderait des administrateurs mais
+            // plus personne pour distribuer les accès ni régler la boutique.
+            if ((int) $customer['is_super_admin'] === 1) {
+                $sortie("Refus : {$email} est super administrateur. Désignez d'abord son remplaçant : php bin/admin.php super <e-mail>", 1);
+            }
+
             $restants = (int) Database::first(
                 'SELECT COUNT(*) c FROM customers WHERE is_admin = 1 AND id <> ?',
                 [$customer['id']]
@@ -105,8 +162,14 @@ switch ($commande) {
           php bin/admin.php lister
           php bin/admin.php promouvoir <e-mail>
           php bin/admin.php retrograder <e-mail>
+          php bin/admin.php super <e-mail>
 
         Le compte doit déjà exister : inscrivez-vous sur le site, puis promouvez
         cette adresse. Le mot de passe reste celui que vous avez choisi.
+
+        « super » désigne le seul compte qui puisse distribuer des accès et
+        toucher aux réglages. Le rang est unique : le déplacer le retire à qui
+        l'avait. Les autres administrateurs tiennent les commandes, le
+        catalogue, les clients et la messagerie.
         AIDE);
 }

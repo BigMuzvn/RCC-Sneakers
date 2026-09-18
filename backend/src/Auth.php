@@ -154,6 +154,9 @@ class Auth
             // revérifie à chaque appel, un client qui le falsifierait dans sa
             // mémoire ne gagnerait qu'un lien vers une page qui lui répond 403.
             'is_admin' => (int) ($row['is_admin'] ?? 0) === 1,
+            // Décide ce que la barre latérale affiche, rien de plus : les
+            // routes correspondantes revérifient le rang.
+            'is_super_admin' => (int) ($row['is_super_admin'] ?? 0) === 1,
             'created_at' => $row['created_at'],
         ];
     }
@@ -217,6 +220,27 @@ class Auth
         $customer = $this->customer();
 
         if ($customer === null || (int) ($customer['is_admin'] ?? 0) !== 1) {
+            return null;
+        }
+
+        return $customer;
+    }
+
+    /**
+     * Le client courant s'il est **super administrateur**, sinon null.
+     *
+     * Un seul compte porte ce rang : celui qui distribue les accès et règle la
+     * boutique. Les autres administrateurs tiennent les commandes, le
+     * catalogue, les clients et la messagerie — tout sauf ce qui leur
+     * permettrait de se donner des droits ou de retirer les siens au premier.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function superAdmin(): ?array
+    {
+        $customer = $this->admin();
+
+        if ($customer === null || (int) ($customer['is_super_admin'] ?? 0) !== 1) {
             return null;
         }
 

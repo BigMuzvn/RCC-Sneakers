@@ -21,7 +21,6 @@ type CustomerRow = {
   email: string;
   phone: string;
   status: string;
-  is_admin: boolean;
   email_verified: boolean;
   orders_count: number;
   spent_xof: number;
@@ -145,7 +144,6 @@ export default function AdminCustomers() {
                   <td className="px-4 py-3.5 text-[11px] text-white/40">{formatDate(row.created_at)}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex flex-wrap gap-1.5">
-                      {row.is_admin && <Badge tone="blue">Admin</Badge>}
                       {row.status !== 'active' && (
                         <Badge tone={row.status === 'suspended' ? 'red' : 'neutral'}>
                           {STATUS_LABEL[row.status]}
@@ -199,7 +197,6 @@ function CustomerPanel({
             <Badge tone={customer.status === 'active' ? 'green' : customer.status === 'suspended' ? 'red' : 'neutral'}>
               {STATUS_LABEL[customer.status]}
             </Badge>
-            {customer.is_admin && <Badge tone="blue">Administrateur</Badge>}
             <Badge tone={customer.email_verified ? 'green' : 'amber'}>
               {customer.email_verified ? 'Adresse vérifiée' : 'Adresse non vérifiée'}
             </Badge>
@@ -256,20 +253,6 @@ function CustomerPanel({
                     Réactiver
                   </Button>
                 )}
-
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    onAction(
-                      customer.id,
-                      'role',
-                      { is_admin: !customer.is_admin },
-                      customer.is_admin ? 'Accès administrateur retiré.' : 'Accès administrateur accordé.',
-                    )
-                  }
-                >
-                  {customer.is_admin ? 'Retirer l’accès admin' : 'Rendre administrateur'}
-                </Button>
               </div>
 
               <p className="mt-2.5 text-[10px] leading-[1.6] text-white/30">

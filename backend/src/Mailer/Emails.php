@@ -58,6 +58,35 @@ class Emails
     }
 
     /**
+     * Invitation à administrer la boutique.
+     *
+     * Le lien conduit au même écran que « mot de passe oublié » : la personne
+     * choisit son mot de passe elle-même. Aucun mot de passe n'est donc
+     * fabriqué par le gérant ni transmis par message.
+     */
+    public static function adminInvitation(string $name, string $link): array
+    {
+        return [
+            'subject' => 'Votre accès à l’administration RCC Sneakers',
+            'html' => self::layout(
+                title: 'Bienvenue dans l’administration',
+                body: sprintf(
+                    '<p style="margin:0 0 16px">Bonjour %s,</p>
+                     <p style="margin:0 0 16px">Un accès à l’administration de la boutique RCC
+                     Sneakers vient d’être ouvert à votre nom. Choisissez votre mot de passe
+                     pour vous connecter : personne d’autre ne le connaîtra.</p>',
+                    self::escape($name)
+                ),
+                buttonLabel: 'Choisir mon mot de passe',
+                buttonLink: $link,
+                footnote: 'Ce lien est valable 48 heures et ne fonctionne qu’une fois. Si vous
+                           ne vous attendiez pas à ce message, ignorez-le : sans mot de passe,
+                           le compte reste inutilisable.'
+            ),
+        ];
+    }
+
+    /**
      * Confirmation de commande.
      *
      * Les lignes viennent de la commande enregistrée, jamais du catalogue : ce
