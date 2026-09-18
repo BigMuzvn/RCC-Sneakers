@@ -292,9 +292,15 @@ frontend/src/
 
 ## Données
 
-Les champs sont nommés **en `snake_case`**, exactement comme les renverra `GET /api/products`. Le jour où le backend existe, on remplace l'import par un `fetch` sans toucher aux composants ni écrire de couche de correspondance.
+**Le catalogue vient du serveur.** `GET /api/products`, `GET /api/jerseys` et `GET /api/shop` sont demandés une fois par visite, dans `CatalogueProvider`, et toutes les pages y puisent. Les modules `src/data/products.ts` et `src/data/jerseys.ts` ont disparu : tant qu'ils existaient, une paire ajoutée dans l'administration n'apparaissait pas en boutique, et une vitrine réordonnée ne changeait pas l'accueil. C'est ce qui donne son effet à l'administration.
 
-Le stock est modélisé **par taille** (`variants: [{ size, stock }]`), ce qui correspond à une table `product_variants` en base et permet à l'interface de griser les tailles épuisées.
+Deux conversions seulement séparent la réponse des composants, faites dans `src/api/catalogue.ts` pour n'exister qu'une fois : le nom de fichier d'un visuel devient une URL, et les marques comme les championnats sont **déduits du catalogue** plutôt que listés à la main — une marque saisie dans l'administration entre donc dans les filtres le jour même.
+
+Une taille est une **chaîne**, jamais un nombre : la base la stocke ainsi, et le gérant doit pouvoir saisir « 42,5 » ou « XL » sans que le front en fasse un `NaN`.
+
+Le panier, lui, est enregistré **en entier** et recalé sur le catalogue dès son arrivée. Attendre la réponse du serveur aurait montré un panier vide à quelqu'un qui en a un ; l'affichage n'engage rien, puisque le serveur relit ses propres prix et son propre stock au moment de la commande.
+
+Le stock est modélisé **par taille** (`variants: [{ size, stock }]`), ce qui correspond à la table `product_variants` et permet à l'interface de griser les tailles épuisées.
 
 **Prix** : convertis depuis le tarif public en dollars au taux réel du 14/09/2026 (**1 USD = 565,65 F CFA**, relevé sur `open.er-api.com`, cohérent avec la parité fixe EUR/XOF à 655,957), puis arrondis aux 500 F. Aucune marge revendeur n'est appliquée — à trancher.
 
@@ -320,7 +326,7 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 3. ~~**Commandes**~~ — faites. Catalogue en base, stock réel, lignes figées.
 4. **Agrégateur de paiement** — à choisir (KkiaPay, FedaPay, CinetPay sont les candidats béninois à comparer). Le reste du tunnel l'attend.
 5. ~~**Administration**~~ — faite. Huit écrans, 28 routes, journal des actions.
-6. **Front sur l'API du catalogue** — remplacer les imports de `src/data/` par des `fetch`, pour que le stock affiché cesse d'être en retard.
+6. ~~**Front sur l'API du catalogue**~~ — fait. Les modules `src/data/` sont supprimés, l'administration pilote réellement la boutique.
 7. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
 8. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
 
@@ -330,13 +336,10 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 
 | Manque | Détail |
 |---|---|
-| Commandes | Le tunnel va jusqu'au bout et affiche une référence, mais **rien n'est enregistré** et la référence est générée côté navigateur. À câbler avant toute mise en ligne. |
 | Paiement en ligne | Refusé par le serveur, désactivé dans le tunnel. Aucun agrégateur n'est branché. Seul le paiement à la livraison fonctionne — et il fonctionne entièrement. |
-| Téléchargement de facture | Bouton présent et désactivé. Le format n'est pas arrêté. |
-| Stock affiché | Le front lit encore ses modules locaux : après une vente, le nombre affiché peut être en retard. Le serveur, lui, refuse une commande au-delà du stock réel. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
-| Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris avec « visuel à venir ». Déposer le PNG et remplacer `image: null` par l'import suffit. |
+| Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris. Le gérant les dépose depuis l'administration, sans intervention. |
 | Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |
 | Tarifs de livraison | 1 000 / 1 500 / 2 500 F CFA sont des valeurs de remplacement, en haut de `Checkout.tsx`. |
 | Coordonnées | Téléphone, e-mail et liens réseaux sont des valeurs de remplacement, en haut de `Footer.tsx` et `Contact.tsx`. |

@@ -61,6 +61,7 @@ class App
         $router->add('GET', '/orders/{reference}', fn (Request $r, string $ref) => $orders->show($r, $ref));
 
         $public = new PublicController($this->mailer, $this->contacts);
+        $router->add('GET', '/shop', fn (Request $r) => $public->shop($r));
         $router->add('POST', '/newsletter', fn (Request $r) => $public->subscribe($r));
         $router->add('POST', '/contact', fn (Request $r) => $public->contact($r));
 

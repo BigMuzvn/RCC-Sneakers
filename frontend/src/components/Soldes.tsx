@@ -4,8 +4,10 @@ import Footer from './Footer';
 import HangingShoe from './HangingShoe';
 import ProductCard from './ProductCard';
 import Chip from './Chip';
+import CatalogueFallback from './CatalogueFallback';
 import hangingSamba from '../assets/hanging-samba.png';
-import { PRODUCTS, type Product } from '../data/products';
+import type { Product } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 
 const PAGE_GRADIENT =
@@ -22,20 +24,23 @@ type Sort = (typeof SORTS)[number]['id'];
 const discountOf = (product: Product) =>
   product.old_price_xof ? 1 - product.price_xof / product.old_price_xof : 0;
 
-const ON_SALE = PRODUCTS.filter((product) => product.old_price_xof !== null);
-
 export default function Soldes() {
+  const { products: catalogue } = useCatalogue();
   const [sort, setSort] = useState<Sort>('discount');
 
+  const onSale = useMemo(() => catalogue.filter((product) => product.old_price_xof !== null), [catalogue]);
+
   const products = useMemo(() => {
-    const list = [...ON_SALE];
+    const list = [...onSale];
     if (sort === 'price-asc') return list.sort((a, b) => a.price_xof - b.price_xof);
     if (sort === 'price-desc') return list.sort((a, b) => b.price_xof - a.price_xof);
     return list.sort((a, b) => discountOf(b) - discountOf(a));
-  }, [sort]);
+  }, [onSale, sort]);
 
-  const bestDiscount = Math.round(Math.max(...ON_SALE.map(discountOf)) * 100);
-  const totalSaved = ON_SALE.reduce(
+  // `Math.max` d'une liste vide vaut -Infinity : sans ce garde-fou, une page
+  // sans solde afficherait « -Infinity % » le temps du chargement.
+  const bestDiscount = onSale.length === 0 ? 0 : Math.round(Math.max(...onSale.map(discountOf)) * 100);
+  const totalSaved = onSale.reduce(
     (sum, product) => sum + ((product.old_price_xof ?? product.price_xof) - product.price_xof),
     0,
   );
@@ -76,7 +81,7 @@ export default function Soldes() {
             <p className="mt-2 text-[9px] uppercase tracking-[0.16em] text-white/45">Remise maximale</p>
           </div>
           <div className="border border-white/10 bg-white/[0.03] px-4 py-4">
-            <p className="font-display text-[26px] leading-none text-[#EDEFF2] sm:text-[32px]">{ON_SALE.length}</p>
+            <p className="font-display text-[26px] leading-none text-[#EDEFF2] sm:text-[32px]">{onSale.length}</p>
             <p className="mt-2 text-[9px] uppercase tracking-[0.16em] text-white/45">Modèles concernés</p>
           </div>
           <div className="col-span-2 border border-white/10 bg-white/[0.03] px-4 py-4 lg:col-span-1">
@@ -101,11 +106,15 @@ export default function Soldes() {
         </p>
 
         {/* ---------- GRID ---------- */}
-        <div className="mt-4 grid grid-cols-2 gap-3 pb-6 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 pb-6 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <CatalogueFallback vide="Aucune paire n'est en solde en ce moment. Les fins de série arrivent par vagues." />
+        )}
       </div>
 
       <Footer />

@@ -9,8 +9,7 @@ import JerseyCard from './JerseyCard';
 import { ApiFailure, api } from '../api/client';
 import { useAuth } from '../context/auth-context';
 import { useFavorites } from '../context/favorites-context';
-import { PRODUCTS } from '../data/products';
-import { JERSEYS } from '../data/jerseys';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 import paireCompte from '../assets/paire-compte.png';
 
@@ -558,22 +557,23 @@ function Field({ label, value, onChange, type = 'text', error, hint, placeholder
 
 function FavoritesTab() {
   const { favorites, loading } = useFavorites();
+  const { products, jerseys, loading: catalogueEnCours } = useCatalogue();
 
   const items = useMemo(
     () =>
       favorites
         .map((favorite) =>
           favorite.item_type === 'sneaker'
-            ? { kind: 'sneaker' as const, data: PRODUCTS.find((p) => p.id === favorite.item_id) }
-            : { kind: 'jersey' as const, data: JERSEYS.find((j) => j.id === favorite.item_id) },
+            ? { kind: 'sneaker' as const, data: products.find((p) => p.id === favorite.item_id) }
+            : { kind: 'jersey' as const, data: jerseys.find((j) => j.id === favorite.item_id) },
         )
         // Un favori dont l'article a disparu du catalogue ne doit pas laisser
         // une carte vide dans la grille.
         .filter((item) => item.data !== undefined),
-    [favorites],
+    [favorites, products, jerseys],
   );
 
-  if (loading) {
+  if (loading || catalogueEnCours) {
     return <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Chargement…</p>;
   }
 

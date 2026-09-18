@@ -1,70 +1,109 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PRODUCTS } from '../data/products';
-import { JERSEYS } from '../data/jerseys';
+import { useCatalogue } from './catalogue-context';
 import { CartContext, lineKey, type CartLine, type CartValue } from './cart-context';
-
-/** Only identifiers are persisted — image URLs are build hashes and would break after a rebuild. */
-type StoredLine = { type: CartLine['type']; id: number; size: string; qty: number };
 
 const STORAGE_KEY = 'rcc-cart';
 
-function buildLine(stored: StoredLine): CartLine | null {
-  if (stored.type === 'sneaker') {
-    const product = PRODUCTS.find((item) => item.id === stored.id);
-    if (!product) return null;
-    return {
-      key: lineKey('sneaker', product.id, stored.size),
-      type: 'sneaker',
-      id: product.id,
-      href: `/boutique/${product.slug}`,
-      title: `${product.brand} ${product.model}`,
-      subtitle: product.colorway,
-      size: stored.size,
-      unit_price_xof: product.price_xof,
-      image: product.image,
-      accent: product.accent,
-      qty: stored.qty,
-    };
-  }
-  const jersey = JERSEYS.find((item) => item.id === stored.id);
-  if (!jersey) return null;
-  return {
-    key: lineKey('jersey', jersey.id, stored.size),
-    type: 'jersey',
-    id: jersey.id,
-    href: null,
-    title: jersey.club,
-    subtitle: `${jersey.kit} · ${jersey.season}`,
-    size: stored.size,
-    unit_price_xof: jersey.price_xof,
-    image: jersey.image,
-    accent: jersey.accent,
-    qty: stored.qty,
-  };
-}
+/**
+ * Le panier survit au rechargement, et se **recale** sur le catalogue.
+ *
+ * Il portait auparavant les seuls identifiants et reconstruisait ses lignes
+ * depuis les modules du front — ce qui n'est plus possible : le catalogue
+ * arrive maintenant du serveur, quelques centaines de millisecondes après
+ * l'affichage. Attendre cette réponse aurait montré un panier vide à quelqu'un
+ * qui en a un.
+ *
+ * Les lignes sont donc enregistrées entières et affichées aussitôt, puis
+ * confrontées au catalogue dès son arrivée : un prix modifié se corrige, un
+ * article retiré de la vente disparaît. Cet affichage n'engage rien — le
+ * serveur relit ses propres prix et son propre stock au moment de la commande,
+ * et c'est lui qui tranche.
+ */
+type StoredLine = Partial<CartLine> & { type: CartLine['type']; id: number; size: string; qty: number };
 
 function readStorage(): CartLine[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
+
     const parsed: StoredLine[] = JSON.parse(raw);
-    return parsed.map(buildLine).filter((line): line is CartLine => line !== null);
+
+    return parsed
+      .filter((stored) => typeof stored?.id === 'number' && typeof stored?.size === 'string')
+      .map((stored) => ({
+        // Les paniers enregistrés avant ce changement ne portent que des
+        // identifiants : on les accepte tels quels, le recalage les complète.
+        key: lineKey(stored.type, stored.id, stored.size),
+        type: stored.type,
+        id: stored.id,
+        href: stored.href ?? null,
+        title: stored.title ?? '',
+        subtitle: stored.subtitle ?? '',
+        size: stored.size,
+        unit_price_xof: stored.unit_price_xof ?? 0,
+        image: stored.image ?? null,
+        accent: stored.accent ?? '#808080',
+        qty: stored.qty,
+      }));
   } catch {
     return [];
   }
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { products, jerseys, loading } = useCatalogue();
+
   const [lines, setLines] = useState<CartLine[]>(readStorage);
   const [isOpen, setIsOpen] = useState(false);
   const [toast, setToast] = useState<CartValue['toast']>(null);
 
+  // Recalage sur le catalogue, à chaque fois qu'il change.
+  useEffect(() => {
+    if (loading) return;
+
+    setLines((current) =>
+      current.flatMap((line) => {
+        if (line.type === 'sneaker') {
+          const product = products.find((item) => item.id === line.id);
+          if (!product) return [];
+
+          return [
+            {
+              ...line,
+              href: `/boutique/${product.slug}`,
+              title: `${product.brand} ${product.model}`,
+              subtitle: product.colorway,
+              unit_price_xof: product.price_xof,
+              image: product.image,
+              accent: product.accent,
+            },
+          ];
+        }
+
+        const jersey = jerseys.find((item) => item.id === line.id);
+        if (!jersey) return [];
+
+        return [
+          {
+            ...line,
+            href: `/maillots/${jersey.slug}`,
+            title: jersey.club,
+            subtitle: `${jersey.kit} · ${jersey.season}`,
+            unit_price_xof: jersey.price_xof,
+            image: jersey.image,
+            accent: jersey.accent,
+          },
+        ];
+      }),
+    );
+  }, [products, jerseys, loading]);
+
   useEffect(() => {
     try {
-      const stored: StoredLine[] = lines.map(({ type, id, size, qty }) => ({ type, id, size, qty }));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
     } catch {
-      // storage unavailable (private mode) — the cart simply won't survive a reload
+      // stockage indisponible (navigation privée) — le panier ne survivra
+      // simplement pas au rechargement
     }
   }, [lines]);
 

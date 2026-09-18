@@ -2,28 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useCart } from '../context/cart-context';
-import { PRODUCTS, type Product } from '../data/products';
+import type { Product } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 
 const SLIDE_INTERVAL = 5000;
 
-/**
- * Les quatre paires mises en avant.
- *
- * Ce ne sont pas des visuels de décor : chaque slide **est** un produit du
- * catalogue, désigné par son slug. Le prix, le coloris, le texte et le stock
- * viennent donc de la même source que la boutique, et un achat depuis l'accueil
- * ajoute exactement l'article qu'on voit.
- *
- * Cette liste passera en base à la partie administration — c'est la raison pour
- * laquelle elle ne contient que des slugs et rien de recopié.
- */
-const HERO_SLUGS = [
-  'nike-shox-tl-black-racer-blue',
-  'nike-p-6000-metallic-silver',
-  'nike-air-max-95-neon',
-  'nike-air-max-plus-sunset',
-];
+/** Nombre de paires affichées quand la vitrine n'a pas été réglée. */
+const DEFAUT = 4;
 
 /**
  * Fonds peints à la main pour ces quatre paires : ils ne se déduisent pas d'une
@@ -61,26 +47,63 @@ const swatchFor = (product: Product) =>
   `linear-gradient(135deg, ${product.accent} 0%, ${darken(product.accent, 0.55)} 100%)`;
 
 /** Familles de coloris : toutes les fiches du catalogue partageant marque et modèle. */
-const colorwaysOf = (product: Product) =>
-  PRODUCTS.filter((item) => item.brand === product.brand && item.model === product.model);
+const colorwaysOf = (catalogue: Product[], product: Product) =>
+  catalogue.filter((item) => item.brand === product.brand && item.model === product.model);
 
-const SLIDES = HERO_SLUGS.flatMap((slug) => {
-  const product = PRODUCTS.find((item) => item.slug === slug);
+/**
+ * L'accueil.
+ *
+ * Les paires mises en avant viennent des réglages, choisies dans
+ * l'administration. Ce ne sont pas des visuels de décor : chaque slide **est**
+ * un produit du catalogue, désigné par son slug. Le prix, le coloris, le texte
+ * et le stock viennent donc de la même source que la boutique, et un achat
+ * depuis l'accueil ajoute exactement l'article qu'on voit.
+ */
+export default function Hero() {
+  const { products, featured, loading } = useCatalogue();
 
-  if (!product) {
-    // Bruyant plutôt que silencieux : une paire renommée au catalogue ferait
-    // sinon disparaître un slide sans que personne s'en aperçoive.
-    console.warn(`[accueil] produit introuvable au catalogue : ${slug}`);
+  const slides = useMemo(() => {
+    const choisies = featured.flatMap((slug) => {
+      const product = products.find((item) => item.slug === slug);
 
-    return [];
+      if (!product) {
+        // Bruyant plutôt que silencieux : une paire retirée de la vente ferait
+        // sinon disparaître un slide sans que personne s'en aperçoive.
+        console.warn(`[accueil] produit introuvable au catalogue : ${slug}`);
+
+        return [];
+      }
+
+      return [product];
+    });
+
+    // Une vitrine vide — jamais réglée, ou dont les paires ont été retirées —
+    // ne doit pas donner un accueil noir. Le catalogue prend le relais.
+    return choisies.length > 0 ? choisies : products.slice(0, DEFAUT);
+  }, [products, featured]);
+
+  if (slides.length === 0) {
+    return (
+      <section className="relative flex h-[100svh] w-full flex-col bg-[#05070E] px-4 py-4 sm:px-8 sm:py-6 lg:px-14 lg:py-8">
+        <Navbar />
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-white/35">
+            {loading ? 'Chargement…' : 'Boutique momentanément indisponible.'}
+          </p>
+        </div>
+      </section>
+    );
   }
 
-  return [product];
-});
+  // Remonté à chaque changement de vitrine : l'index retenu appartenait à
+  // l'ancienne liste et pourrait la dépasser.
+  return <Vitrine key={slides.map((slide) => slide.slug).join('|')} slides={slides} />;
+}
 
-export default function Hero() {
+function Vitrine({ slides }: { slides: Product[] }) {
   const navigate = useNavigate();
   const { add } = useCart();
+  const { products } = useCatalogue();
 
   const [active, setActive] = useState(0);
   /** Coloris retenu pour chaque slide, quand le modèle en compte plusieurs. */
@@ -88,8 +111,8 @@ export default function Hero() {
   /** Action en attente d'une taille — le panneau de tailles est ouvert. */
   const [pending, setPending] = useState<null | 'cart' | 'buy'>(null);
 
-  const famille = useMemo(() => colorwaysOf(SLIDES[active]), [active]);
-  const produit = famille[colorway[active] ?? 0] ?? SLIDES[active];
+  const famille = useMemo(() => colorwaysOf(products, slides[active]), [products, slides, active]);
+  const produit = famille[colorway[active] ?? 0] ?? slides[active];
 
   // Redémarre à chaque changement, pour qu'un choix manuel dispose d'un
   // intervalle complet. Suspendu pendant le choix d'une taille : voir un slide
@@ -98,10 +121,10 @@ export default function Hero() {
   useEffect(() => {
     if (pending !== null) return;
 
-    const id = setInterval(() => setActive((current) => (current + 1) % SLIDES.length), SLIDE_INTERVAL);
+    const id = setInterval(() => setActive((current) => (current + 1) % slides.length), SLIDE_INTERVAL);
 
     return () => clearInterval(id);
-  }, [active, pending]);
+  }, [active, pending, slides.length]);
 
   // Changer de slide referme le panneau : il appartenait à la paire précédente.
   useEffect(() => setPending(null), [active]);
@@ -109,14 +132,14 @@ export default function Hero() {
   const disponibles = produit.variants.filter((variant) => variant.stock > 0);
   const enRupture = disponibles.length === 0;
 
-  const choisirTaille = (size: number) => {
+  const choisirTaille = (size: string) => {
     add({
       type: 'sneaker',
       id: produit.id,
       href: `/boutique/${produit.slug}`,
       title: `${produit.brand} ${produit.model}`,
       subtitle: produit.colorway,
-      size: String(size),
+      size,
       unit_price_xof: produit.price_xof,
       image: produit.image,
       accent: produit.accent,
@@ -131,7 +154,7 @@ export default function Hero() {
   return (
     <section className="relative isolate flex h-[100svh] w-full flex-col overflow-hidden bg-[#05070E] px-4 py-4 sm:px-8 sm:py-6 lg:px-14 lg:py-8">
       {/* fonds par slide, en fondu croisé */}
-      {SLIDES.map((item, index) => (
+      {slides.map((item, index) => (
         <div
           key={item.slug}
           aria-hidden="true"
@@ -164,7 +187,7 @@ export default function Hero() {
           </div>
         </div>
 
-        {SLIDES.map((item, index) => {
+        {slides.map((item, index) => {
           const affiche = index === active ? produit : item;
 
           return affiche.image ? (
@@ -187,7 +210,7 @@ export default function Hero() {
         role="tablist"
         aria-label="Sélection du modèle"
       >
-        {SLIDES.map((item, index) => (
+        {slides.map((item, index) => (
           <button
             key={item.slug}
             type="button"

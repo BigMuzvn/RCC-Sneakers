@@ -6,12 +6,24 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import JerseyCard from './JerseyCard';
 import FavoriteButton from './FavoriteButton';
-import { JERSEYS, type Jersey } from '../data/jerseys';
+import type { Jersey } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 
 export default function JerseyDetail() {
   const { slug } = useParams();
-  const jersey = JERSEYS.find((item) => item.slug === slug);
+  const { jerseys, loading } = useCatalogue();
+  const jersey = jerseys.find((item) => item.slug === slug);
+
+  // Voir plus haut, dans la fiche des paires : avant l'arrivée du catalogue,
+  // « introuvable » serait un mensonge.
+  if (loading) {
+    return (
+      <div className="flex min-h-[100svh] w-full items-center justify-center bg-[#0A0B0C]">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Chargement…</p>
+      </div>
+    );
+  }
 
   if (!jersey) return <Navigate to="/maillots" replace />;
 
@@ -19,6 +31,7 @@ export default function JerseyDetail() {
 }
 
 function JerseyView({ jersey }: { jersey: Jersey }) {
+  const { jerseys } = useCatalogue();
   const [size, setSize] = useState<string | null>(null);
   const { add } = useCart();
   const navigate = useNavigate();
@@ -45,11 +58,11 @@ function JerseyView({ jersey }: { jersey: Jersey }) {
   // Le même championnat d'abord ; complété par d'autres si le championnat est
   // peu fourni, pour ne jamais afficher une rangée de suggestions à moitié vide.
   const related = useMemo(() => {
-    const memeChampionnat = JERSEYS.filter((i) => i.id !== jersey.id && i.league === jersey.league);
-    const autres = JERSEYS.filter((i) => i.id !== jersey.id && i.league !== jersey.league);
+    const memeChampionnat = jerseys.filter((i) => i.id !== jersey.id && i.league === jersey.league);
+    const autres = jerseys.filter((i) => i.id !== jersey.id && i.league !== jersey.league);
 
     return [...memeChampionnat, ...autres].slice(0, 4);
-  }, [jersey]);
+  }, [jerseys, jersey]);
 
   const selectedVariant = jersey.variants.find((variant) => variant.size === size);
   const discount = jersey.old_price_xof

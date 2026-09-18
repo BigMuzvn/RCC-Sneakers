@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Product } from '../data/products';
+import type { Product } from '../api/catalogue';
 import { formatXof } from '../utils/format';
 import { useCart } from '../context/cart-context';
 import QuickAdd from './QuickAdd';

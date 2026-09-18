@@ -4,16 +4,24 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import HangingShoe from './HangingShoe';
 import hangingAirMax1 from '../assets/hanging-airmax1.png';
+import { useCatalogue } from '../context/catalogue-context';
+import type { ShopSettings } from '../api/catalogue';
 
 const PAGE_GRADIENT =
   'radial-gradient(ellipse 95% 58% at 45% 0%, #6B4A3E 0%, #453035 26%, #241E24 56%, #0C0C0E 100%)';
 
-const CHANNELS = [
-  { icon: MapPin, label: 'Adresse', lines: ['Cotonou, Bénin', 'Retrait en boutique sur rendez-vous'] },
-  { icon: Phone, label: 'Téléphone & WhatsApp', lines: ['+229 01 00 00 00 00'] },
-  { icon: Mail, label: 'E-mail', lines: ['contact@rccsneakers.bj'] },
-  { icon: Clock, label: 'Horaires', lines: ['Lundi – samedi : 9 h – 19 h', 'Dimanche : sur rendez-vous'] },
-];
+/**
+ * Les coordonnées viennent des réglages, et une case laissée vide fait
+ * disparaître son encadré. La page portait auparavant des horaires inventés et
+ * un numéro d'exemple : mieux vaut une coordonnée de moins qu'une fausse.
+ */
+const channelsOf = (settings: ShopSettings) =>
+  [
+    { icon: MapPin, label: 'Adresse', lines: [settings.shop_city] },
+    { icon: Phone, label: 'Téléphone & WhatsApp', lines: [settings.shop_phone] },
+    { icon: Mail, label: 'E-mail', lines: [settings.shop_email] },
+    { icon: Clock, label: 'Horaires', lines: [settings.shop_hours] },
+  ].filter((channel) => channel.lines.some((line) => line !== ''));
 
 const SUBJECTS = ['Disponibilité d’une paire', 'Suivi de commande', 'Retour ou échange', 'Autre demande'];
 
@@ -21,7 +29,10 @@ const inputClass =
   'w-full border border-white/15 bg-white/[0.03] px-3.5 py-3 text-[12px] text-white placeholder:text-white/35 transition-colors focus:border-white/50 focus:outline-none';
 
 export default function Contact() {
+  const { settings } = useCatalogue();
   const [sent, setSent] = useState(false);
+
+  const channels = channelsOf(settings);
 
   return (
     <div className="relative flex min-h-[100svh] w-full flex-col overflow-x-clip">
@@ -137,7 +148,7 @@ export default function Contact() {
           <section>
             <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#EDEFF2]">Nos coordonnées</h2>
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              {CHANNELS.map(({ icon: Icon, label, lines }) => (
+              {channels.map(({ icon: Icon, label, lines }) => (
                 <div key={label} className="border border-white/10 bg-white/[0.02] p-5">
                   <span className="flex h-9 w-9 items-center justify-center border border-white/15 text-white/70">
                     <Icon className="h-4 w-4" strokeWidth={2} />

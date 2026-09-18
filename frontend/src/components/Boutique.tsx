@@ -4,27 +4,33 @@ import Footer from './Footer';
 import HangingShoe from './HangingShoe';
 import ProductCard from './ProductCard';
 import Chip from './Chip';
+import CatalogueFallback from './CatalogueFallback';
 import hangingJordan from '../assets/hanging-jordan.png';
-import { BRANDS, CATEGORIES, PRODUCTS, type Category } from '../data/products';
+import { CATEGORIES, brandsOf, type Category } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 
 const PAGE_GRADIENT =
   'radial-gradient(ellipse 95% 60% at 62% 0%, #5A4A46 0%, #3A3034 30%, #1E1C20 60%, #0C0C0E 100%)';
 
-type BrandFilter = (typeof BRANDS)[number] | 'all';
 type CategoryFilter = Category | 'all';
 
 export default function Boutique() {
-  const [brand, setBrand] = useState<BrandFilter>('all');
+  const { products: catalogue } = useCatalogue();
+  const [brand, setBrand] = useState<string>('all');
   const [category, setCategory] = useState<CategoryFilter>('all');
+
+  // Les marques viennent du catalogue lui-même : celle d'une paire ajoutée
+  // dans l'administration doit apparaître ici sans qu'on y touche.
+  const brands = useMemo(() => brandsOf(catalogue), [catalogue]);
 
   const products = useMemo(
     () =>
-      PRODUCTS.filter(
+      catalogue.filter(
         (product) =>
           (brand === 'all' || product.brand === brand) &&
           (category === 'all' || product.category === category),
       ),
-    [brand, category],
+    [catalogue, brand, category],
   );
 
   return (
@@ -51,8 +57,8 @@ export default function Boutique() {
           </div>
 
           <p className="mt-5 max-w-md text-[11px] leading-[1.7] text-white/55 sm:mt-6 sm:text-xs">
-            {PRODUCTS.length} paires authentiques sélectionnées à la main. Livraison à Cotonou sous 24 h et expédition
-            dans tout le Bénin.
+            {catalogue.length > 0 ? `${catalogue.length} paires authentiques` : 'Des paires authentiques'} sélectionnées
+            à la main. Livraison à Cotonou sous 24 h et expédition dans tout le Bénin.
           </p>
         </header>
 
@@ -62,7 +68,7 @@ export default function Boutique() {
             <Chip active={brand === 'all'} onClick={() => setBrand('all')}>
               Toutes les marques
             </Chip>
-            {BRANDS.map((item) => (
+            {brands.map((item) => (
               <Chip key={item} active={brand === item} onClick={() => setBrand(item)}>
                 {item}
               </Chip>
@@ -93,10 +99,7 @@ export default function Boutique() {
             ))}
           </div>
         ) : (
-          <div className="mt-4 border border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#EDEFF2]">Aucun modèle</p>
-            <p className="mt-2 text-xs text-white/50">Aucune paire ne correspond à cette combinaison de filtres.</p>
-          </div>
+          <CatalogueFallback vide="Aucune paire ne correspond à cette combinaison de filtres." />
         )}
       </div>
 

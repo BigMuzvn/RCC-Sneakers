@@ -3,8 +3,14 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Mail, MapPin, Phone } from 'lucide-react';
 import rccLogo from '../assets/rcc-logo.png';
 import { LEGAL_PAGES, LEGAL_SLUGS } from '../data/legal';
+import { useCatalogue } from '../context/catalogue-context';
 
-const SOCIALS = ['Instagram', 'Facebook', 'WhatsApp'];
+/** Réseaux affichés, dans cet ordre, et seulement si une adresse est renseignée. */
+const SOCIALS = [
+  { key: 'social_instagram', label: 'Instagram' },
+  { key: 'social_facebook', label: 'Facebook' },
+  { key: 'social_whatsapp', label: 'WhatsApp' },
+] as const;
 
 function Newsletter() {
   const [signedUp, setSignedUp] = useState(false);
@@ -67,6 +73,8 @@ function Newsletter() {
 }
 
 export default function Footer() {
+  const { settings } = useCatalogue();
+
   return (
     <footer className="relative mt-8 overflow-hidden border-t border-white/10 bg-[#07080A]">
       <div className="relative z-10 px-4 pb-8 pt-12 sm:px-8 sm:pt-14 lg:px-14">
@@ -83,11 +91,15 @@ export default function Footer() {
               Sneakers authentiques, sélectionnées à la main et livrées à Cotonou sous 24 h. Chaque paire est
               contrôlée avant expédition.
             </p>
+            {/* Un réseau sans adresse n'est pas affiché : un lien qui ne mène
+                nulle part coûte plus de confiance qu'il n'en rapporte. */}
             <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {SOCIALS.map((label) => (
+              {SOCIALS.filter(({ key }) => settings[key] !== '').map(({ key, label }) => (
                 <a
-                  key={label}
-                  href="#"
+                  key={key}
+                  href={settings[key]}
+                  target="_blank"
+                  rel="noreferrer noopener"
                   className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/55 transition-colors hover:text-white"
                 >
                   {label}
@@ -133,19 +145,33 @@ export default function Footer() {
           {/* contact */}
           <div className="col-span-2 lg:col-span-1">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#EDEFF2]">Nous joindre</h2>
+            {/* Ces trois lignes viennent des réglages : le gérant change son
+                numéro depuis l'administration, sans redéploiement. Le téléphone
+                et l'adresse sont cliquables — sur un téléphone, c'est la
+                différence entre un appel et un numéro à recopier. */}
             <ul className="mt-4 flex flex-col gap-3 text-[11px] text-white/50">
-              <li className="flex items-start gap-2.5">
-                <MapPin className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
-                <span>Cotonou, Bénin</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Phone className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
-                <span>+229 01 00 00 00 00</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Mail className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
-                <span>contact@rccsneakers.bj</span>
-              </li>
+              {settings.shop_city !== '' && (
+                <li className="flex items-start gap-2.5">
+                  <MapPin className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
+                  <span>{settings.shop_city}</span>
+                </li>
+              )}
+              {settings.shop_phone !== '' && (
+                <li className="flex items-start gap-2.5">
+                  <Phone className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
+                  <a href={`tel:${settings.shop_phone.replace(/\s/g, '')}`} className="transition-colors hover:text-white">
+                    {settings.shop_phone}
+                  </a>
+                </li>
+              )}
+              {settings.shop_email !== '' && (
+                <li className="flex items-start gap-2.5">
+                  <Mail className="mt-px h-3.5 w-3.5 shrink-0 text-white/40" strokeWidth={2} />
+                  <a href={`mailto:${settings.shop_email}`} className="transition-colors hover:text-white">
+                    {settings.shop_email}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>

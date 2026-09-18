@@ -3,20 +3,25 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import JerseyCard from './JerseyCard';
 import Chip from './Chip';
+import CatalogueFallback from './CatalogueFallback';
 import maillotsHero from '../assets/maillots-hero.png';
-import { JERSEYS, LEAGUES, type League } from '../data/jerseys';
+import { leaguesOf } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 
 const PAGE_GRADIENT =
   'radial-gradient(ellipse 95% 58% at 55% 0%, #33407E 0%, #2B2740 28%, #1A1722 58%, #0B0B10 100%)';
 
-type LeagueFilter = League | 'all';
-
 export default function Maillots() {
-  const [league, setLeague] = useState<LeagueFilter>('all');
+  const { jerseys: catalogue } = useCatalogue();
+  const [league, setLeague] = useState<string>('all');
+
+  // Les championnats sont déduits du catalogue : en ajouter un dans
+  // l'administration suffit à le voir apparaître dans les filtres.
+  const leagues = useMemo(() => leaguesOf(catalogue), [catalogue]);
 
   const jerseys = useMemo(
-    () => (league === 'all' ? JERSEYS : JERSEYS.filter((jersey) => jersey.league === league)),
-    [league],
+    () => (league === 'all' ? catalogue : catalogue.filter((jersey) => jersey.league === league)),
+    [catalogue, league],
   );
 
   return (
@@ -52,7 +57,8 @@ export default function Maillots() {
           </div>
 
           <p className="mt-5 max-w-md text-[11px] leading-[1.7] text-white/55 sm:mt-6 sm:text-xs">
-            Maillots de clubs et de sélections, saison {JERSEYS[0].season}. Flocage nom et numéro possible sur demande,
+            Maillots de clubs et de sélections{catalogue[0] ? `, saison ${catalogue[0].season}` : ''}. Flocage nom et
+            numéro possible sur demande,
             livraison à Cotonou sous 24 h.
           </p>
 
@@ -79,7 +85,7 @@ export default function Maillots() {
           <Chip active={league === 'all'} onClick={() => setLeague('all')}>
             Tous les championnats
           </Chip>
-          {LEAGUES.map((item) => (
+          {leagues.map((item) => (
             <Chip key={item} active={league === item} onClick={() => setLeague(item)}>
               {item}
             </Chip>
@@ -98,10 +104,7 @@ export default function Maillots() {
             ))}
           </div>
         ) : (
-          <div className="mt-4 border border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#EDEFF2]">Aucun maillot</p>
-            <p className="mt-2 text-xs text-white/50">Aucun maillot ne correspond à ce championnat.</p>
-          </div>
+          <CatalogueFallback vide="Aucun maillot ne correspond à ce championnat." />
         )}
       </div>
 

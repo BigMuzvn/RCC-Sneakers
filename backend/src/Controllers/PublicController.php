@@ -14,18 +14,63 @@ use Rcc\Settings;
 use Rcc\Validator;
 
 /**
- * Formulaires publics : lettre d'information et contact.
+ * Ce que la boutique expose sans compte : ses propres réglages, et les
+ * formulaires de lettre d'information et de contact.
  *
- * Tous deux sont anonymes et sans compte. C'est ce qui impose une limitation de
+ * Les deux formulaires sont anonymes. C'est ce qui impose une limitation de
  * débit sérieuse : sans elle, un script remplit la table d'adresses inventées
  * et, pour le contact, grignote le quota d'envois à chaque message.
  */
 class PublicController
 {
+    /**
+     * Réglages affichables. La liste est **explicite** : `Settings::all()`
+     * renverrait aussi l'adresse qui reçoit les commandes, qui n'a rien à
+     * faire dans une réponse publique. Un réglage devient visible parce qu'on
+     * l'a décidé, jamais parce qu'on a oublié de l'exclure.
+     */
+    private const PUBLIC_SETTINGS = [
+        'shop_city',
+        'shop_phone',
+        'shop_email',
+        'shop_hours',
+        'social_instagram',
+        'social_facebook',
+        'social_whatsapp',
+    ];
+
     public function __construct(
         private Mailer $mailer,
         private ContactList $contacts,
     ) {
+    }
+
+    /**
+     * Coordonnées et vitrine, en un seul appel.
+     *
+     * Le pied de page et la page contact portaient ces textes en dur ; l'écran
+     * « Réglages » de l'administration les changeait en base sans que rien ne
+     * bouge sur le site. Même chose pour les quatre paires de l'accueil, qui
+     * étaient une liste écrite dans `Hero.tsx`.
+     *
+     * Les slugs de la vitrine sont renvoyés **tels quels**, sans vérifier que
+     * les articles existent : l'accueil lit déjà le catalogue et ignore ce
+     * qu'il n'y trouve pas. Deux requêtes de moins à chaque visite.
+     */
+    public function shop(Request $request): Response
+    {
+        $settings = Settings::all();
+
+        $public = [];
+
+        foreach (self::PUBLIC_SETTINGS as $name) {
+            $public[$name] = $settings[$name] ?? '';
+        }
+
+        return Response::data([
+            'settings' => $public,
+            'featured' => Settings::list('featured_slugs'),
+        ]);
     }
 
     // ------------------------------------------------------- newsletter

@@ -5,12 +5,25 @@ import { useCart } from '../context/cart-context';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ProductCard from './ProductCard';
-import { CATEGORIES, PRODUCTS, type Product } from '../data/products';
+import { CATEGORIES, type Product } from '../api/catalogue';
+import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
 
 export default function ProductDetail() {
   const { slug } = useParams();
-  const product = PRODUCTS.find((item) => item.slug === slug);
+  const { products, loading } = useCatalogue();
+  const product = products.find((item) => item.slug === slug);
+
+  // Tant que le catalogue n'est pas arrivé, conclure « ce modèle n'existe
+  // pas » serait faux : on renverrait à la boutique quelqu'un qui a suivi un
+  // lien parfaitement valide.
+  if (loading) {
+    return (
+      <div className="flex min-h-[100svh] w-full items-center justify-center bg-[#0A0B0C]">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">Chargement…</p>
+      </div>
+    );
+  }
 
   if (!product) return <Navigate to="/boutique" replace />;
 
@@ -19,7 +32,8 @@ export default function ProductDetail() {
 }
 
 function ProductView({ product }: { product: Product }) {
-  const [size, setSize] = useState<number | null>(null);
+  const { products } = useCatalogue();
+  const [size, setSize] = useState<string | null>(null);
   const { add } = useCart();
   const navigate = useNavigate();
 
@@ -35,7 +49,7 @@ function ProductView({ product }: { product: Product }) {
       href: `/boutique/${product.slug}`,
       title: `${product.brand} ${product.model}`,
       subtitle: product.colorway,
-      size: String(size),
+      size,
       unit_price_xof: product.price_xof,
       image: product.image,
       accent: product.accent,
@@ -43,8 +57,8 @@ function ProductView({ product }: { product: Product }) {
   };
 
   const related = useMemo(
-    () => PRODUCTS.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 4),
-    [product],
+    () => products.filter((item) => item.id !== product.id && item.category === product.category).slice(0, 4),
+    [products, product],
   );
 
   const selectedVariant = product.variants.find((variant) => variant.size === size);
