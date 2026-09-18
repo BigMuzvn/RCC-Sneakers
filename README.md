@@ -48,7 +48,7 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 | `/boutique/:slug` | Fiche produit — tailles, stock, suggestions |
 | `/maillots` | 12 maillots de clubs et sélections, filtre par championnat |
 | `/maillots/:slug` | Fiche maillot — tailles, stock, flocage, suggestions |
-| `/soldes` | 8 modèles en remise, 3 tris |
+| `/soldes` | Paires **et** maillots en remise, filtre par famille et 3 tris |
 | `/compte` | Connexion et inscription sur une page, avec interrupteur |
 | `/compte/verifier` | Atterrissage du lien de vérification reçu par e-mail |
 | `/compte/mot-de-passe-oublie` | Demande d'un lien de réinitialisation |
