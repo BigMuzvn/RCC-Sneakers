@@ -5,8 +5,8 @@ import Footer from './Footer';
 import { ApiFailure } from '../api/client';
 import { useAuth } from '../context/auth-context';
 import type { Customer } from '../context/auth-context';
-import visuelConnexion from '../assets/auth-connexion.png';
-import visuelInscription from '../assets/auth-inscription.png';
+import visuelConnexion from '../assets/auth-connexion.webp';
+import visuelInscription from '../assets/auth-inscription.webp';
 
 /**
  * Tones sampled from the saturated pixels of each visual. Both images share the red Nike box,

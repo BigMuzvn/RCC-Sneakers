@@ -4,7 +4,7 @@ import { ApiFailure, api } from '../api/client';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import HangingShoe from './HangingShoe';
-import hangingAirMax1 from '../assets/hanging-airmax1.png';
+import hangingAirMax1 from '../assets/hanging-airmax1.webp';
 import { useCatalogue } from '../context/catalogue-context';
 import type { ShopSettings } from '../api/catalogue';
 

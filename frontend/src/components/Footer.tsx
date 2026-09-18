@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Mail, MapPin, Phone } from 'lucide-react';
-import rccLogo from '../assets/rcc-logo.png';
+import rccLogo from '../assets/rcc-logo.webp';
 import { ApiFailure, api } from '../api/client';
 import { LEGAL_PAGES, LEGAL_SLUGS } from '../data/legal';
 import { useCatalogue } from '../context/catalogue-context';

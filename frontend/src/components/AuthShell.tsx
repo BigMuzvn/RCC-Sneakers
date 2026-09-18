@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import SideShoe from './SideShoe';
-import paireCompte from '../assets/paire-compte.png';
+import paireCompte from '../assets/paire-compte.webp';
 
 const PAGE_GRADIENT =
   'radial-gradient(ellipse 95% 62% at 74% 0%, #4A5878 0%, #3C3140 30%, #1B191E 60%, #0A0A0C 100%)';

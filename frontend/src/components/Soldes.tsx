@@ -6,7 +6,7 @@ import ProductCard from './ProductCard';
 import JerseyCard from './JerseyCard';
 import Chip from './Chip';
 import CatalogueFallback from './CatalogueFallback';
-import hangingSamba from '../assets/hanging-samba.png';
+import hangingSamba from '../assets/hanging-samba.webp';
 import type { Jersey, Product } from '../api/catalogue';
 import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';

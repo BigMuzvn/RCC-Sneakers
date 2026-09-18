@@ -4,7 +4,7 @@ import { Check, ShoppingBag, Trash2 } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import HangingShoe from './HangingShoe';
-import hangingDunk from '../assets/hanging-dunk-russet.png';
+import hangingDunk from '../assets/hanging-dunk-russet.webp';
 import { useCart } from '../context/cart-context';
 import { useAuth } from '../context/auth-context';
 import { ApiFailure, api } from '../api/client';

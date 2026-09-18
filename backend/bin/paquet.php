@@ -132,6 +132,16 @@ $lignesDb = sprintf(
     var_export((string) $db['pass'], true) . ','
 );
 
+// L'en-tête ne parle de valeurs à renseigner que s'il en reste : annoncer un
+// travail déjà fait envoie chercher quelque chose qui n'existe pas.
+$avertissement = $manquants === []
+    ? ''
+    : "
+ *
+ * Ce qui reste marqué « À REMPLIR » appartient à l'hébergeur : l'inventer
+"
+        . " * ferait échouer le déploiement sans rien dire.";
+
 $ligneUrl = $url !== ''
     ? var_export($url, true) . ','
     : "'https://exemple.infinityfreeapp.com',  // << À REMPLIR >>";
@@ -140,10 +150,7 @@ $config = <<<PHP
 <?php
 
 /**
- * Configuration du site en ligne, fabriquée par bin/paquet.php.
- *
- * Ce qui reste marqué « À REMPLIR » appartient à l'hébergeur : l'inventer
- * ferait échouer le déploiement sans rien dire.
+ * Configuration du site en ligne, fabriquée par bin/paquet.php.{$avertissement}
  */
 
 return [

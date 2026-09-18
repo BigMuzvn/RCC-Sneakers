@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import HangingShoe from './HangingShoe';
-import hangingDunks from '../assets/hanging-dunks.png';
+import hangingDunks from '../assets/hanging-dunks.webp';
 import { LEGAL_PAGES, LEGAL_SLUGS } from '../data/legal';
 
 const PAGE_GRADIENT =

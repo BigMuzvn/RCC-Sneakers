@@ -4,7 +4,7 @@ import Footer from './Footer';
 import JerseyCard from './JerseyCard';
 import Chip from './Chip';
 import CatalogueFallback from './CatalogueFallback';
-import maillotsHero from '../assets/maillots-hero.png';
+import maillotsHero from '../assets/maillots-hero.webp';
 import { leaguesOf } from '../api/catalogue';
 import { useCatalogue } from '../context/catalogue-context';
 

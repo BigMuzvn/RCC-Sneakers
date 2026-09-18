@@ -12,7 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/auth-context';
-import logo from '../../assets/rcc-logo.png';
+import logo from '../../assets/rcc-logo.webp';
 
 export const ADMIN_LINKS = [
   { to: '/admin', end: true, label: "Vue d'ensemble", icon: LayoutDashboard },

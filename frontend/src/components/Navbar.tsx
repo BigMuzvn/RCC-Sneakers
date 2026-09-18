@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import SearchOverlay from './SearchOverlay';
-import rccLogo from '../assets/rcc-logo.png';
+import rccLogo from '../assets/rcc-logo.webp';
 import { useCart } from '../context/cart-context';
 import { useAuth } from '../context/auth-context';
 

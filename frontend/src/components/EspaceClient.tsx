@@ -11,7 +11,7 @@ import { useAuth } from '../context/auth-context';
 import { useFavorites } from '../context/favorites-context';
 import { useCatalogue } from '../context/catalogue-context';
 import { formatXof } from '../utils/format';
-import paireCompte from '../assets/paire-compte.png';
+import paireCompte from '../assets/paire-compte.webp';
 
 /** Tons relevés sur le visuel : périwinkle 30 %, bordeaux-rose 23 %. */
 const PAGE_GRADIENT =

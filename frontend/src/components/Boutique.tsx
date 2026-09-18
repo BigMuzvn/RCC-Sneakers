@@ -5,7 +5,7 @@ import HangingShoe from './HangingShoe';
 import ProductCard from './ProductCard';
 import Chip from './Chip';
 import CatalogueFallback from './CatalogueFallback';
-import hangingJordan from '../assets/hanging-jordan.png';
+import hangingJordan from '../assets/hanging-jordan.webp';
 import { CATEGORIES, brandsOf, type Category } from '../api/catalogue';
 import { useCatalogue } from '../context/catalogue-context';
 
