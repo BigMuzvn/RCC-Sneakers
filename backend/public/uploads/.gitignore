@@ -1,0 +1,4 @@
+# Les visuels téléversés appartiennent à l'installation, pas au dépôt.
+*
+!.gitignore
+!.htaccess

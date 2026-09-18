@@ -26,13 +26,40 @@ abstract class DatabaseTestCase extends TestCase
         'migrations',
         'products', 'product_variants',
         'jerseys', 'jersey_variants',
-        'delivery_zones',
+    ];
+
+    /**
+     * Zones de livraison remises à neuf avant chaque test.
+     *
+     * Elles ne sont pas préservées comme le catalogue : elles tiennent en trois
+     * lignes, et l'administration les modifie. Les garder ferait fuir un tarif
+     * ou un libellé changé par un test dans tous les suivants — ce qui est
+     * arrivé, un test de commande héritant d'une zone renommée.
+     *
+     * @var array<int,array{0:string,1:string,2:string,3:int,4:int}>
+     */
+    private const ZONES = [
+        ['cotonou', 'Cotonou', 'sous 24 h', 1000, 1],
+        ['nokoue', 'Grand Nokoué', 'sous 48 h', 1500, 2],
+        ['benin', 'Reste du Bénin', 'sous 72 h', 2500, 3],
     ];
 
     protected function setUp(): void
     {
         Config::load();
         $this->truncateAll();
+        $this->resetDeliveryZones();
+    }
+
+    private function resetDeliveryZones(): void
+    {
+        foreach (self::ZONES as [$id, $label, $delay, $fee, $position]) {
+            Database::run(
+                'INSERT INTO delivery_zones (id, label, delay_label, fee_xof, position, is_active)
+                 VALUES (?, ?, ?, ?, ?, 1)',
+                [$id, $label, $delay, $fee, $position]
+            );
+        }
     }
 
     /** Fixe le stock d'une taille précise, pour rendre le test déterministe. */

@@ -64,6 +64,8 @@ class App
         $router->add('POST', '/newsletter', fn (Request $r) => $public->subscribe($r));
         $router->add('POST', '/contact', fn (Request $r) => $public->contact($r));
 
+        $this->addAdminRoutes($router, $auth);
+
         $response = $router->dispatch($request);
 
         // Les cookies posés pendant le traitement sont recollés ici : le
@@ -71,6 +73,74 @@ class App
         $response->cookies = $cookies->headers();
 
         return $response;
+    }
+
+    /**
+     * Routes d'administration.
+     *
+     * La vérification d'accès est **appliquée ici, une seule fois**, et non
+     * répétée au début de chaque méthode : une garde recopiée trente fois finit
+     * par être oubliée une fois, et cet oubli-là ouvre la boutique.
+     *
+     * Le contrôleur ne reçoit donc jamais une requête non autorisée ; il reçoit
+     * l'administrateur en second argument, déjà vérifié.
+     */
+    private function addAdminRoutes(Router $router, Auth $auth): void
+    {
+        /** Enveloppe un gestionnaire d'administration de sa garde d'accès. */
+        $guard = static function (callable $handler) use ($auth): callable {
+            return static function (Request $request, string ...$params) use ($auth, $handler): Response {
+                $admin = $auth->admin();
+
+                if ($admin !== null) {
+                    return $handler($request, $admin, ...$params);
+                }
+
+                // 401 pour un visiteur, 403 pour un client identifié : la
+                // différence évite au second une boucle de reconnexion inutile.
+                return $auth->id() === null ? Response::unauthorized() : Response::forbidden();
+            };
+        };
+
+        $dashboard = new Admin\DashboardController();
+        $router->add('GET', '/admin/overview', $guard([$dashboard, 'overview']));
+        $router->add('GET', '/admin/log', $guard([$dashboard, 'log']));
+
+        $orders = new Admin\OrdersController($this->mailer);
+        $router->add('GET', '/admin/orders', $guard([$orders, 'index']));
+        $router->add('GET', '/admin/orders/{reference}', $guard([$orders, 'show']));
+        $router->add('POST', '/admin/orders/{reference}/status', $guard([$orders, 'updateStatus']));
+
+        $catalogue = new Admin\CatalogueController();
+        $router->add('GET', '/admin/products', $guard([$catalogue, 'products']));
+        $router->add('POST', '/admin/products', $guard([$catalogue, 'createProduct']));
+        $router->add('POST', '/admin/products/{id}', $guard([$catalogue, 'updateProduct']));
+        $router->add('POST', '/admin/products/{id}/stock', $guard([$catalogue, 'updateProductStock']));
+        $router->add('GET', '/admin/jerseys', $guard([$catalogue, 'jerseys']));
+        $router->add('POST', '/admin/jerseys', $guard([$catalogue, 'createJersey']));
+        $router->add('POST', '/admin/jerseys/{id}', $guard([$catalogue, 'updateJersey']));
+        $router->add('POST', '/admin/jerseys/{id}/stock', $guard([$catalogue, 'updateJerseyStock']));
+        $router->add('POST', '/admin/uploads', $guard([$catalogue, 'upload']));
+
+        $customers = new Admin\CustomersController();
+        $router->add('GET', '/admin/customers', $guard([$customers, 'index']));
+        $router->add('GET', '/admin/customers/{id}', $guard([$customers, 'show']));
+        $router->add('POST', '/admin/customers/{id}/status', $guard([$customers, 'updateStatus']));
+        $router->add('POST', '/admin/customers/{id}/anonymise', $guard([$customers, 'anonymise']));
+        $router->add('POST', '/admin/customers/{id}/role', $guard([$customers, 'updateRole']));
+
+        $inbox = new Admin\InboxController($this->contacts);
+        $router->add('GET', '/admin/messages', $guard([$inbox, 'messages']));
+        $router->add('POST', '/admin/messages/{id}/status', $guard([$inbox, 'updateMessageStatus']));
+        $router->add('GET', '/admin/newsletter', $guard([$inbox, 'subscribers']));
+        $router->add('POST', '/admin/newsletter/{id}/unsubscribe', $guard([$inbox, 'unsubscribe']));
+        $router->add('POST', '/admin/newsletter/sync', $guard([$inbox, 'sync']));
+
+        $settings = new Admin\SettingsController();
+        $router->add('GET', '/admin/settings', $guard([$settings, 'index']));
+        $router->add('POST', '/admin/settings', $guard([$settings, 'update']));
+        $router->add('POST', '/admin/featured', $guard([$settings, 'updateFeatured']));
+        $router->add('POST', '/admin/delivery-zones/{id}', $guard([$settings, 'updateZone']));
     }
 
     /** Liste de contacts de la lettre d'information. */

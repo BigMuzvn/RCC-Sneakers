@@ -48,6 +48,54 @@ abstract class ApiTestCase extends DatabaseTestCase
         return $this->request('POST', $path, $body);
     }
 
+    /**
+     * Crée un compte et le promeut, puis laisse la session ouverte.
+     *
+     * Pas de reconnexion nécessaire après la promotion : la garde relit la
+     * ligne du client à chaque requête, elle voit donc le drapeau aussitôt.
+     */
+    protected function loginAsAdmin(string $email = 'admin@exemple.com', string $phone = '0197000099'): int
+    {
+        $id = $this->openSession('Administrateur RCC', $email, $phone);
+        \Rcc\Database::run('UPDATE customers SET is_admin = 1 WHERE id = ?', [$id]);
+
+        return $id;
+    }
+
+    /** Crée un client ordinaire et laisse sa session ouverte. */
+    protected function loginAsCustomer(string $email = 'client@exemple.com', string $phone = '0197000011'): int
+    {
+        return $this->openSession('Client Ordinaire', $email, $phone);
+    }
+
+    /**
+     * Ouvre une session : inscription si le compte est neuf, connexion sinon.
+     *
+     * Un test enchaîne souvent plusieurs rôles et revient au premier ; sans ce
+     * repli, la seconde inscription est refusée et le test se poursuit sans
+     * session, en produisant des 401 qui n'ont rien à voir avec ce qu'il vérifie.
+     */
+    private function openSession(string $name, string $email, string $phone): int
+    {
+        $existant = \Rcc\Database::first('SELECT id FROM customers WHERE email = ?', [$email]);
+
+        if ($existant === null) {
+            $this->post('/auth/register', [
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => 'motdepasse',
+                'terms' => true,
+            ]);
+        } else {
+            $this->post('/auth/login', ['identifier' => $email, 'password' => 'motdepasse']);
+        }
+
+        $this->mailer->sent = [];
+
+        return (int) \Rcc\Database::first('SELECT id FROM customers WHERE email = ?', [$email])['id'];
+    }
+
     protected function get(string $path): Response
     {
         return $this->request('GET', $path);

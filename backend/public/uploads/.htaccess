@@ -1,0 +1,30 @@
+# Dossier des visuels produits : que des images, jamais du code.
+#
+# Le ré-encodage systématique empêche déjà un PHP de survivre au passage, mais
+# une seconde barrière ne coûte rien — et c'est elle qui tient si le premier
+# rempart tombe un jour.
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Sur un hébergeur qui passe par CGI/FPM, php_flag est sans effet : on refuse
+# alors le service de tout ce qui pourrait être interprété.
+<FilesMatch "\.(php|phtml|phar|cgi|pl|py|sh|html?)$">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes -ExecCGI
+AddType image/webp .webp
+
+# Les noms sont aléatoires et jamais réutilisés : un cache long est sans risque.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 1 year"
+</IfModule>

@@ -224,6 +224,48 @@ class Emails
         ];
     }
 
+    /**
+     * Suivi de commande : le statut a changé.
+     *
+     * C'est tout l'intérêt d'un suivi — un statut qui avance sans que le client
+     * l'apprenne ne lui sert à rien.
+     *
+     * @param array<string,mixed> $order ligne brute de `orders`
+     * @return array{subject:string,html:string}
+     */
+    public static function orderStatus(array $order, string $status, string $label): array
+    {
+        $texte = match ($status) {
+            'confirmed' => 'Nous avons vérifié la disponibilité de vos articles. Votre commande part en préparation.',
+            'shipped' => sprintf(
+                'Votre commande est en route. Le livreur vous appellera au %s avant de se présenter.',
+                $order['contact_phone']
+            ),
+            'delivered' => 'Votre commande vous a été remise. Merci de votre confiance — et à bientôt.',
+            'cancelled' => "Votre commande a été annulée et les articles sont remis en vente. Si ce n'est pas ce que vous attendiez, répondez à ce message.",
+            default => 'Le suivi de votre commande a été mis à jour.',
+        };
+
+        return [
+            'subject' => sprintf('Commande %s — %s', $order['reference'], $label),
+            'html' => self::layout(
+                title: self::escape($label),
+                body: sprintf(
+                    '<p style="margin:0 0 16px">Bonjour %s,</p>
+                     <p style="margin:0 0 16px">%s</p>
+                     <p style="margin:0 0 6px;font-size:12px;color:#8A9099;">Référence</p>
+                     <p style="margin:0;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;color:#17191C;">%s</p>',
+                    self::escape((string) $order['contact_name']),
+                    self::escape($texte),
+                    self::escape((string) $order['reference'])
+                ),
+                buttonLabel: 'Voir ma commande',
+                buttonLink: rtrim((string) Config::get('app.url'), '/') . '/espace-client',
+                footnote: 'Une question sur cette commande ? Répondez simplement à ce message.'
+            ),
+        ];
+    }
+
     /** Formatage monétaire, aligné sur celui du site. */
     private static function xof(int $amount): string
     {
