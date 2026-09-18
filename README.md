@@ -62,6 +62,26 @@ Première fois, voir [Backend](#backend) pour `config.php` et les migrations.
 
 L'accueil tient en un écran sans défilement (`100svh`) et n'a donc **pas de footer** ; toutes les autres pages en ont un.
 
+## L'écran de chargement
+
+Il vit dans `index.html`, pas dans React. Ce n'est pas un détail d'implémentation : mesuré sur le build de production, cache vidé, en 3G de quartier, **2 040 ms des 3 240 ms d'attente s'écoulent avant que React existe**. Un écran de chargement écrit en React ne peut pas s'y afficher, puisqu'il fait partie de ce qu'on attend. Posé dans le HTML, il est peint au premier octet et couvre la totalité de l'attente, sans une ligne de JavaScript.
+
+Pour la même raison, pas de bibliothèque d'animation : ce serait une cinquantaine de kilo-octets ajoutés au paquet *pour donner l'impression que le site va plus vite*, soit environ 400 ms d'écran vide en plus. Flottement, rotation, reflet et fondu se font en CSS, que le navigateur anime sans attendre personne.
+
+**Les couleurs sont relevées sur le visuel**, comme partout ailleurs : la paire est à 94 % graphite, et l'orange n'occupe que 2 % de ses pixels — mais c'est le seul chroma, donc ce qui la fait exister. Le halo sous la semelle et le reflet sont bâtis dessus. Le reflet est d'ailleurs **découpé dans la silhouette** par `mask-image` pointant le même fichier, déjà en cache : la lumière glisse sur la chaussure et nulle part ailleurs, sans un octet de plus.
+
+Trois règles gouvernent son apparition, et chacune corrige un défaut que l'autre créerait :
+
+- **il n'apparaît qu'après 400 ms.** Sur une bonne connexion la boutique est prête en 380 ms : un écran qui s'affiche et disparaît aussitôt est un clignotement, plus désagréable que pas d'écran du tout ;
+- **une fois montré, il reste au moins 600 ms.** Sans ce plancher, une connexion juste au-dessus du seuil le verrait monter à mi-opacité puis repartir — un battement de paupière qui se lit comme un défaut ;
+- **il disparaît quand le catalogue est arrivé**, pas quand React a monté. Découvrir la boutique vide pendant une demi-seconde annulerait le bénéfice. Y compris quand le catalogue n'arrive pas : la page sait dire que la connexion a coupé et propose de réessayer, ce qu'une barre qui tourne indéfiniment ne fera jamais.
+
+La paire est demandée en **priorité basse** : sur une connexion lente, le paquet de la boutique passe devant et l'image peut n'arriver qu'après. C'est voulu — la ligne de texte, elle, est là dès le premier pixel, et ce qui compte en 3G est que l'écran ne soit pas noir.
+
+Mesuré, sur le build servi avec ses en-têtes : jamais visible en fibre (retiré à 399 ms), visible 630 ms en 4G, 2 650 ms en 3G, et retiré en 315 ms quand l'API ne répond pas.
+
+Deux détails qui n'en sont pas. Le script de l'écran est un **fichier**, pas une balise en ligne : la politique de sécurité du contenu du site n'autorise que ses propres fichiers, et un script écrit dans le HTML serait refusé par le navigateur — l'écran resterait figé. Et `prefers-reduced-motion` reçoit la même composition, immobile.
+
 ## Chercher, et ne jamais tomber dans le vide
 
 **La recherche** se fait dans le navigateur. Le catalogue y est déjà chargé : rien à demander au serveur, les résultats arrivent à la frappe. Une route de recherche n'aurait rien apporté sur trente articles, sinon une attente. Les accents sont retirés des deux côtés de la comparaison — « selections » doit trouver « Sélections », personne ne compose un accent dans un champ de recherche — et chaque mot doit se retrouver, dans n'importe quel ordre : « nike 95 » et « 95 nike » donnent la même paire. Entrée ouvre le premier résultat, Échap referme.

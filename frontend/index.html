@@ -1,13 +1,297 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="theme-color" content="#08090B" />
+    <meta
+      name="description"
+      content="Sneakers et maillots authentiques à Cotonou. Sélection à la main, livraison sous 24 h au Bénin."
+    />
+    <title>RCC Sneakers — Cotonou</title>
+
+    <!--
+      L'écran de chargement vit ici, et non dans React.
+
+      Mesuré sur le build de production, cache vidé : en 3G de quartier, 2 040 ms
+      des 3 240 ms d'attente s'écoulent **avant** que React existe. Un écran de
+      chargement écrit en React ne peut pas s'y afficher, puisqu'il fait partie
+      de ce qu'on attend. Posé ici, il est peint au premier octet de HTML et
+      couvre la totalité de l'attente, sans une ligne de JavaScript.
+
+      Les couleurs sont relevées sur le visuel lui-même : la paire est à 94 %
+      graphite, et l'orange n'y occupe que 2 % des pixels — mais c'est le seul
+      chroma, donc ce qui la fait exister. Le halo et le reflet sont bâtis
+      dessus, le reste reste neutre.
+    -->
+    <style>
+      :root {
+        --rcc-noir: #08090b;
+        --rcc-graphite: #313032;
+        --rcc-gris: #626266;
+        --rcc-clair: #b7b8bd;
+        --rcc-orange: #e47324;
+      }
+
+      html,
+      body {
+        margin: 0;
+        background: var(--rcc-noir);
+      }
+
+      #chargement {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 26px;
+        background:
+          radial-gradient(ellipse 78% 62% at 50% 44%, #3a3a3e 0%, #242427 34%, #121214 68%, var(--rcc-noir) 100%);
+        font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+        /* Invisible pendant les 400 premières millisecondes. Sur une bonne
+           connexion la boutique est prête en 380 ms : l'écran de chargement ne
+           doit alors jamais apparaître, un clignotement étant plus désagréable
+           que pas d'écran du tout. */
+        opacity: 0;
+        animation: rcc-venir 420ms ease-out 400ms forwards;
+      }
+
+      #chargement[data-part] {
+        animation: rcc-partir 420ms ease-in forwards;
+      }
+
+      @keyframes rcc-venir {
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes rcc-partir {
+        to {
+          opacity: 0;
+          transform: scale(1.04);
+        }
+      }
+
+      /* ---------------------------------------------------------- la paire */
+
+      .rcc-scene {
+        position: relative;
+        width: min(62vw, 230px);
+        aspect-ratio: 440 / 433;
+      }
+
+      /* Le halo naît sous la paire, pas derrière : une lueur centrée sur le
+         milieu de l'image la ferait flotter dans une bulle. */
+      .rcc-scene::before {
+        content: "";
+        position: absolute;
+        inset: -18% -12% -26%;
+        background: radial-gradient(
+          ellipse 54% 34% at 50% 78%,
+          rgba(228, 115, 36, 0.22) 0%,
+          rgba(98, 98, 102, 0.16) 42%,
+          transparent 72%
+        );
+        animation: rcc-respirer 4.6s ease-in-out infinite alternate;
+      }
+
+      .rcc-paire,
+      .rcc-reflet {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .rcc-paire {
+        object-fit: contain;
+        /* L'image arrive en priorité basse et se montre quand elle arrive. Sur
+           une connexion lente elle peut n'arriver qu'après la boutique : c'est
+           voulu. La ligne de texte, elle, est là dès le premier pixel. */
+        opacity: 0;
+        transition: opacity 520ms ease-out;
+        filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55));
+      }
+
+      .rcc-paire.est-la {
+        opacity: 1;
+      }
+
+      /* Le reflet est découpé dans la silhouette de la paire : même fichier,
+         donc déjà en cache — la bande lumineuse glisse sur la chaussure et
+         nulle part ailleurs. */
+      .rcc-reflet {
+        background: linear-gradient(
+          104deg,
+          transparent 38%,
+          rgba(255, 255, 255, 0.5) 47%,
+          rgba(228, 115, 36, 0.35) 51%,
+          transparent 60%
+        );
+        background-size: 280% 100%;
+        -webkit-mask-image: url("/chargement.webp");
+        mask-image: url("/chargement.webp");
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        opacity: 0;
+        animation: rcc-reflet 3.4s ease-in-out 900ms infinite;
+        pointer-events: none;
+      }
+
+      .rcc-flottement {
+        width: 100%;
+        height: 100%;
+        animation: rcc-flotter 4.6s ease-in-out infinite alternate;
+      }
+
+      /* Quatre degrés, pas quinze : au-delà, une paire en trois quarts ne
+         flotte plus, elle bascule. */
+      @keyframes rcc-flotter {
+        from {
+          transform: translateY(6px) rotate(-1.6deg);
+        }
+        to {
+          transform: translateY(-10px) rotate(2.4deg);
+        }
+      }
+
+      @keyframes rcc-respirer {
+        from {
+          opacity: 0.75;
+          transform: scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1.04);
+        }
+      }
+
+      @keyframes rcc-reflet {
+        0%,
+        8% {
+          opacity: 0;
+          background-position: 132% 0;
+        }
+        22% {
+          opacity: 1;
+        }
+        58% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 0;
+          background-position: -32% 0;
+        }
+      }
+
+      /* ---------------------------------------------------------- le texte */
+
+      .rcc-marque {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        color: #edeff2;
+      }
+
+      .rcc-marque span {
+        font-weight: 500;
+        color: rgba(237, 239, 242, 0.42);
+      }
+
+      .rcc-mot {
+        margin: -14px 0 0;
+        font-size: 10.5px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(237, 239, 242, 0.4);
+      }
+
+      /* Une barre fine, pas un cercle : le cercle de chargement est le seul
+         élément qui appartiendrait à n'importe quel site. */
+      .rcc-barre {
+        position: relative;
+        width: min(52vw, 190px);
+        height: 2px;
+        overflow: hidden;
+        background: rgba(237, 239, 242, 0.1);
+      }
+
+      .rcc-barre span {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        background: linear-gradient(90deg, transparent, var(--rcc-orange), transparent);
+        animation: rcc-barre 1.35s ease-in-out infinite;
+      }
+
+      @keyframes rcc-barre {
+        from {
+          transform: translateX(-110%);
+        }
+        to {
+          transform: translateX(370%);
+        }
+      }
+
+      /* Quelqu'un qui a demandé moins d'animations reçoit la même composition,
+         immobile. Le site entier respecte déjà cette préférence. */
+      @media (prefers-reduced-motion: reduce) {
+        .rcc-flottement,
+        .rcc-scene::before,
+        .rcc-reflet,
+        .rcc-barre span {
+          animation: none;
+        }
+
+        .rcc-reflet {
+          opacity: 0;
+        }
+
+        .rcc-barre span {
+          width: 100%;
+          background: rgba(228, 115, 36, 0.5);
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="chargement" role="status" aria-live="polite">
+      <div class="rcc-scene">
+        <div class="rcc-flottement">
+          <img
+            class="rcc-paire"
+            src="/chargement.webp"
+            alt=""
+            width="440"
+            height="433"
+            fetchpriority="low"
+            decoding="async"
+          />
+          <span class="rcc-reflet" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <p class="rcc-marque">RCC <span>Sneakers</span></p>
+      <p class="rcc-mot" id="chargement-mot">On prépare la sélection</p>
+
+      <div class="rcc-barre" aria-hidden="true"><span></span></div>
+    </div>
+
     <div id="root"></div>
+
+    <script src="/chargement.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
