@@ -60,10 +60,13 @@ export default function Navbar() {
             )}
           </button>
           {/* Connecté, l'icône mène à l'espace client : renvoyer quelqu'un vers
-              un formulaire de connexion qu'il a déjà rempli n'a pas de sens. */}
+              un formulaire de connexion qu'il a déjà rempli n'a pas de sens.
+              Un administrateur, lui, va à son tableau de bord. */}
           <Link
-            to={customer ? '/espace-client' : '/compte'}
-            aria-label={customer ? 'Mon espace client' : 'Mon compte'}
+            to={customer ? (customer.is_admin ? '/admin' : '/espace-client') : '/compte'}
+            aria-label={
+              customer ? (customer.is_admin ? 'Administration' : 'Mon espace client') : 'Mon compte'
+            }
             className={`relative flex h-6 w-6 items-center justify-center rounded-full transition-opacity hover:opacity-80 ${
               customer ? 'bg-[#EDEFF2] text-[#17191C]' : 'bg-[#EDEFF2] text-[#17191C]'
             }`}

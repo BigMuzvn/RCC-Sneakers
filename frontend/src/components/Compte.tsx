@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 import { ApiFailure } from '../api/client';
 import { useAuth } from '../context/auth-context';
+import type { Customer } from '../context/auth-context';
 import visuelConnexion from '../assets/auth-connexion.png';
 import visuelInscription from '../assets/auth-inscription.png';
 
@@ -45,6 +46,19 @@ const REASONS: Record<string, string> = {
   commande: 'Un compte est nécessaire pour valider une commande. Votre panier est conservé.',
 };
 
+/**
+ * Où conduire quelqu'un dont la session vient d'être ouverte.
+ *
+ * Un administrateur va droit à son tableau de bord : l'espace client ne lui
+ * sert à rien, et l'y déposer laisse croire que le lien « Administration »
+ * s'affiche pour tout le monde. Une destination explicite garde la priorité —
+ * celui qu'on avait interrompu au paiement doit revenir au paiement.
+ */
+function destination(customer: Customer, next: string | null): string {
+  if (next !== null && next !== '') return next;
+  return customer.is_admin ? '/admin' : '/espace-client';
+}
+
 export default function Compte() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -62,7 +76,7 @@ export default function Compte() {
 
   // Déjà connecté : cette page n'a plus de raison d'être affichée.
   useEffect(() => {
-    if (!loading && customer) navigate(next ?? '/espace-client', { replace: true });
+    if (!loading && customer) navigate(destination(customer, next), { replace: true });
   }, [loading, customer, navigate, next]);
 
   const switchTo = (nextMode: Mode) => {
@@ -81,14 +95,16 @@ export default function Compte() {
     const data = new FormData(event.currentTarget);
 
     try {
+      let compte: Customer;
+
       if (isConnexion) {
-        await login(
+        compte = await login(
           String(data.get('identifier') ?? ''),
           String(data.get('password') ?? ''),
           data.get('remember') === 'on',
         );
       } else {
-        await register({
+        compte = await register({
           name: String(data.get('name') ?? ''),
           email: String(data.get('email') ?? ''),
           phone: String(data.get('phone') ?? ''),
@@ -97,7 +113,7 @@ export default function Compte() {
         });
       }
 
-      navigate(next ?? '/espace-client', { replace: true });
+      navigate(destination(compte, next), { replace: true });
     } catch (error) {
       setSubmitting(false);
 

@@ -170,7 +170,9 @@ Le compte doit exister : on promeut un client, on ne fabrique pas un administrat
 
 **La garde est appliquée en un seul point**, dans `App::addAdminRoutes`, et non recopiée au début de chaque méthode : une garde répétée trente fois finit par être oubliée une fois, et cet oubli-là ouvre la boutique. Un test parcourt les vingt-huit routes aux trois niveaux d'accès — visiteur, client, administrateur.
 
-Le drapeau voyage jusqu'au front pour afficher l'entrée du menu, mais ne protège rien : le serveur revérifie à chaque appel.
+Le drapeau voyage jusqu'au front pour orienter la navigation, mais ne protège rien : le serveur revérifie à chaque appel.
+
+**Un administrateur ne passe pas par l'espace client.** Sa connexion le dépose sur le tableau de bord, l'icône de compte de la boutique y mène aussi, et `/espace-client` l'y renvoie. Ses commandes et ses favoris ne concernent pas son travail, et le déposer dans une page client avec un bouton « Administration » laisse croire que ce bouton s'affiche pour tout le monde. Une destination explicite garde la priorité : celui qu'on avait interrompu au paiement revient au paiement. Conséquence assumée : ses propres coordonnées et son mot de passe vivent désormais dans **Réglages → Mon compte**, sans quoi il n'aurait plus aucun moyen de les changer.
 
 ### Ce que l'administration peut faire
 

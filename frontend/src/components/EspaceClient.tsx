@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, Download, Gauge, Heart, LogOut, Package, User } from 'lucide-react';
+import { AlertTriangle, Check, Download, Heart, LogOut, Package, User } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import SideShoe from './SideShoe';
@@ -43,8 +43,14 @@ export default function EspaceClient() {
 
   // Redirection seulement une fois la session vérifiée : pendant le chargement,
   // `customer` est null sans que cela signifie « visiteur ».
+  //
+  // Un administrateur est renvoyé vers son tableau de bord. Ses commandes, ses
+  // favoris, ses coordonnées : rien de tout cela ne concerne son travail ici, et
+  // le mot de passe — la seule chose qu'il ait à changer — est dans les réglages.
   useEffect(() => {
-    if (!loading && !customer) navigate('/compte', { replace: true });
+    if (loading) return;
+    if (!customer) navigate('/compte', { replace: true });
+    else if (customer.is_admin) navigate('/admin', { replace: true });
   }, [loading, customer, navigate]);
 
   const selectTab = (next: Tab) => {
@@ -52,7 +58,7 @@ export default function EspaceClient() {
     setParams(next === 'commandes' ? {} : { volet: next }, { replace: true });
   };
 
-  if (loading || !customer) {
+  if (loading || !customer || customer.is_admin) {
     return (
       <div className="relative flex min-h-[100svh] w-full items-center justify-center" style={{ background: PAGE_GRADIENT }}>
         <p className="text-[11px] uppercase tracking-[0.2em] text-white/45">Chargement…</p>
@@ -111,24 +117,12 @@ export default function EspaceClient() {
             </button>
           ))}
 
-          {/* L'accès n'apparaît que pour un administrateur — et ce lien ne
-              protège rien : chaque route d'API revérifie le drapeau. */}
-          {customer.is_admin && (
-            <Link
-              to="/admin"
-              className="ml-auto flex items-center gap-2 border border-[#EDEFF2]/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#EDEFF2] transition-colors hover:bg-[#EDEFF2] hover:text-[#17191C]"
-            >
-              <Gauge className="h-3.5 w-3.5" strokeWidth={2.2} />
-              Administration
-            </Link>
-          )}
-
           <button
             type="button"
             onClick={() => {
               void logout().then(() => navigate('/'));
             }}
-            className={`flex items-center gap-2 border border-white/15 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-white/40 hover:text-white ${customer.is_admin ? '' : 'ml-auto'}`}
+            className="ml-auto flex items-center gap-2 border border-white/15 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/50 transition-colors hover:border-white/40 hover:text-white"
           >
             <LogOut className="h-3.5 w-3.5" strokeWidth={2.2} />
             Déconnexion
