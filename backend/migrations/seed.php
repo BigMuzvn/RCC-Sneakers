@@ -11,6 +11,12 @@
  * semoir est **idempotent** : il met à jour les fiches existantes et n'écrase
  * jamais le stock d'une variante déjà connue — sinon rejouer le semoir après
  * quelques ventes ressusciterait des paires déjà vendues.
+ *
+ * Il ne remplace pas non plus un visuel déjà enregistré, pour la même raison :
+ * le nom que porte le JSON est celui d'un rendu du dépôt, alors que la colonne
+ * désigne un fichier de `public/uploads`. Le réécrire effacerait la référence
+ * d'un visuel envoyé depuis l'administration, en laissant le fichier orphelin
+ * sur le disque. C'est `bin/visuels.php` qui fait le pont entre les deux.
  */
 
 require dirname(__DIR__) . '/autoload.php';
@@ -65,7 +71,8 @@ foreach ($catalogue['products'] as $p) {
             category = VALUES(category), gender = VALUES(gender), colorway = VALUES(colorway),
             description = VALUES(description), price_xof = VALUES(price_xof),
             old_price_xof = VALUES(old_price_xof), is_new_drop = VALUES(is_new_drop),
-            image = VALUES(image), accent = VALUES(accent), updated_at = VALUES(updated_at)'
+            image = COALESCE(NULLIF(image, ''), VALUES(image)),
+            accent = VALUES(accent), updated_at = VALUES(updated_at)'
     )->execute([
         $p['id'], $p['slug'], $p['brand'], $p['model'], $p['sku'], $p['category'], $p['gender'],
         $p['colorway'], $p['description'], $p['price_xof'], $p['old_price_xof'],
@@ -91,7 +98,8 @@ foreach ($catalogue['jerseys'] as $j) {
             slug = VALUES(slug), club = VALUES(club), league = VALUES(league), brand = VALUES(brand),
             kit = VALUES(kit), season = VALUES(season), colorway = VALUES(colorway),
             price_xof = VALUES(price_xof), old_price_xof = VALUES(old_price_xof),
-            is_new_drop = VALUES(is_new_drop), image = VALUES(image), accent = VALUES(accent),
+            is_new_drop = VALUES(is_new_drop),
+            image = COALESCE(NULLIF(image, ''), VALUES(image)), accent = VALUES(accent),
             updated_at = VALUES(updated_at)'
     )->execute([
         $j['id'], $j['slug'], $j['club'], $j['league'], $j['brand'], $j['kit'], $j['season'],

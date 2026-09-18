@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ImagePlus, Loader2, Plus, Search, X } from 'lucide-react';
+import { ImageOff, ImagePlus, Loader2, Plus, Search, X } from 'lucide-react';
 import { ApiFailure, api } from '../../api/client';
 import { formatXof } from '../../utils/format';
 import {
@@ -215,8 +215,21 @@ export default function AdminCatalogue({ kind }: { kind: Kind }) {
   );
 }
 
-/** Aperçu : le visuel s'il existe, sinon un halo dans la couleur de l'article. */
+/**
+ * Aperçu : le visuel s'il existe, sinon un halo dans la couleur de l'article.
+ *
+ * Une référence qui ne se charge pas est **dite**, et non masquée. Masquer
+ * confond deux situations opposées : un article auquel on n'a pas encore donné
+ * de visuel, et un article dont le visuel manque sur le serveur. La première
+ * attend une photo, la seconde attend une réparation.
+ */
 function Vignette({ article }: { article: Article }) {
+  const [cassee, setCassee] = useState(false);
+
+  // Un envoi réussi doit effacer l'avertissement : sans cela, la vignette
+  // resterait marquée « introuvable » après avoir été réparée.
+  useEffect(() => setCassee(false), [article.image]);
+
   return (
     <div
       className="relative h-[72px] w-[72px] shrink-0 overflow-hidden border border-white/10"
@@ -224,19 +237,23 @@ function Vignette({ article }: { article: Article }) {
         background: `radial-gradient(ellipse 80% 70% at 50% 56%, ${article.accent}8C 0%, ${article.accent}33 55%, transparent 80%)`,
       }}
     >
-      {article.image && (
+      {article.image && !cassee && (
         <img
           src={`/api/uploads/${article.image}`}
           alt=""
           loading="lazy"
           className="absolute inset-0 h-full w-full object-contain p-1"
-          // Les visuels d'origine sont encore des assets compilés dans le front,
-          // pas des fichiers téléversés : leur nom ne correspond à rien côté
-          // serveur. On masque plutôt que d'afficher une image brisée.
-          onError={(event) => {
-            event.currentTarget.style.display = 'none';
-          }}
+          onError={() => setCassee(true)}
         />
+      )}
+
+      {article.image && cassee && (
+        <span
+          title={`Le fichier « ${article.image} » est absent du serveur.`}
+          className="absolute inset-0 flex items-center justify-center bg-[#0B0C0E]/70 text-[#E2B04A]"
+        >
+          <ImageOff className="h-5 w-5" strokeWidth={2} />
+        </span>
       )}
     </div>
   );

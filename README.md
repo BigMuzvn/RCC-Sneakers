@@ -77,6 +77,7 @@ cp config.example.php config.php    # puis renseigner base et clé Brevo
 composer install                    # PHPUnit seulement, en développement
 php migrations/run.php              # crée le schéma
 php migrations/seed.php             # charge le catalogue
+php bin/visuels.php                 # importe les rendus du dépôt dans les visuels
 php migrations/run.php --test       # base de test
 php migrations/seed.php --test      # catalogue de test
 php -S localhost:8000 -t public     # l'API
@@ -171,6 +172,16 @@ Le compte doit exister : on promeut un client, on ne fabrique pas un administrat
 **La garde est appliquée en un seul point**, dans `App::addAdminRoutes`, et non recopiée au début de chaque méthode : une garde répétée trente fois finit par être oubliée une fois, et cet oubli-là ouvre la boutique. Un test parcourt les vingt-huit routes aux trois niveaux d'accès — visiteur, client, administrateur.
 
 Le drapeau voyage jusqu'au front pour orienter la navigation, mais ne protège rien : le serveur revérifie à chaque appel.
+
+### Les visuels
+
+`products.image` et `jerseys.image` désignent un fichier de `backend/public/uploads`, servi par le serveur et absent du dépôt. Les quatre premiers rendus, eux, ont été intégrés au front avant qu'il existe une administration : ce sont des modules compilés par Vite, et la base n'en gardait que le nom de fichier — un nom qui ne pointait sur rien côté serveur. L'administration affichait donc ces quatre paires sans leur image.
+
+`php bin/visuels.php` fait le pont : il passe les rendus du dépôt par `ImageStore`, exactement comme un envoi depuis l'administration — même ré-encodage en WebP, même limite de 1200 px. Les quatre sont passés de 6,3 Mo à 467 Ko, soit 93 % en moins. Le script est idempotent et ne touche jamais à un visuel déjà en place ; `--liste` n'écrit rien et dit seulement l'état.
+
+Le semoir, lui, **ne remplace plus un visuel déjà enregistré**. Il portait le même défaut que s'il avait écrasé le stock : rejoué après un envoi depuis l'administration, il aurait effacé la référence et laissé le fichier orphelin sur le disque.
+
+Enfin, une référence qui ne se charge pas est **dite**, et non masquée. Masquer confondait deux situations opposées — un article sans visuel, qui attend une photo, et un visuel manquant sur le serveur, qui attend une réparation.
 
 **Un administrateur ne passe pas par l'espace client.** Sa connexion le dépose sur le tableau de bord, l'icône de compte de la boutique y mène aussi, et `/espace-client` l'y renvoie. Ses commandes et ses favoris ne concernent pas son travail, et le déposer dans une page client avec un bouton « Administration » laisse croire que ce bouton s'affiche pour tout le monde. Une destination explicite garde la priorité : celui qu'on avait interrompu au paiement revient au paiement. Conséquence assumée : ses propres coordonnées et son mot de passe vivent désormais dans **Réglages → Mon compte**, sans quoi il n'aurait plus aucun moyen de les changer.
 
