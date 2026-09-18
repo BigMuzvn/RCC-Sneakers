@@ -104,6 +104,23 @@ class CatalogueController
         $file = $_FILES['image'] ?? null;
 
         if (!is_array($file)) {
+            // Au-delà de post_max_size, PHP vide $_POST **et** $_FILES sans
+            // rien signaler : le gérant lirait « aucun fichier reçu » alors
+            // qu'il vient d'en envoyer un. On rattrape le cas sur la longueur
+            // annoncée, seule chose qui survive à ce vidage.
+            $annonce = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+            $plafond = self::bytes((string) ini_get('post_max_size'));
+
+            if ($plafond > 0 && $annonce > $plafond) {
+                return Response::validation([
+                    'image' => sprintf(
+                        'Image trop lourde : %s envoyés, %s au maximum.',
+                        self::human($annonce),
+                        self::human($plafond)
+                    ),
+                ]);
+            }
+
             return Response::validation(['image' => 'Aucun fichier reçu.']);
         }
 
@@ -126,6 +143,33 @@ class CatalogueController
     }
 
     // ------------------------------------------------------------- privé
+
+    /** Traduit « 12M » en octets. Les directives PHP s'écrivent en raccourci. */
+    private static function bytes(string $shorthand): int
+    {
+        $shorthand = trim($shorthand);
+
+        if ($shorthand === '') {
+            return 0;
+        }
+
+        $valeur = (int) $shorthand;
+
+        return match (strtolower(substr($shorthand, -1))) {
+            'g' => $valeur * 1024 * 1024 * 1024,
+            'm' => $valeur * 1024 * 1024,
+            'k' => $valeur * 1024,
+            default => $valeur,
+        };
+    }
+
+    /** Un poids dit au gérant, pas à un développeur. */
+    private static function human(int $bytes): string
+    {
+        return $bytes >= 1048576
+            ? number_format($bytes / 1048576, 1, ',', ' ') . ' Mo'
+            : number_format($bytes / 1024, 0, ',', ' ') . ' Ko';
+    }
 
     /**
      * Traduit une violation d'intégrité en erreur de formulaire — ou rend null

@@ -80,7 +80,7 @@ php migrations/seed.php             # charge le catalogue
 php bin/visuels.php                 # importe les rendus du dépôt dans les visuels
 php migrations/run.php --test       # base de test
 php migrations/seed.php --test      # catalogue de test
-php -S localhost:8000 -t public     # l'API
+php -S localhost:8000 -t public -d upload_max_filesize=8M -d post_max_size=12M
 php bin/admin.php super <e-mail>        # le super administrateur
 ./vendor/bin/phpunit                # 262 tests
 ```
@@ -195,6 +195,12 @@ Le drapeau voyage jusqu'au front pour orienter la navigation, mais ne protège r
 Le semoir, lui, **ne remplace plus un visuel déjà enregistré**. Il portait le même défaut que s'il avait écrasé le stock : rejoué après un envoi depuis l'administration, il aurait effacé la référence et laissé le fichier orphelin sur le disque.
 
 Enfin, une référence qui ne se charge pas est **dite**, et non masquée. Masquer confondait deux situations opposées — un article sans visuel, qui attend une photo, et un visuel manquant sur le serveur, qui attend une réparation.
+
+**Le plafond de téléversement est de 8 Mo.** Les 2 Mo par défaut de beaucoup d'installations refusaient des rendus de maillot, et refuseraient toute photo prise au téléphone. Le poids reçu n'a pourtant aucune incidence sur ce qui est conservé : tout finit en WebP à 1200 px, une centaine de kilo-octets. Ce qui protège la mémoire du serveur est le plafond de 40 millions de pixels, qui vit dans le code et ne dépend pas de cette valeur.
+
+La directive ne peut pas être posée depuis PHP — elle est lue avant que le code ne s'exécute. Elle est donc écrite deux fois dans `backend/public/` : dans `.user.ini` pour les hébergeurs en CGI/FPM, cPanel compris, et dans `.htaccess` pour ceux restés en mod_php. En développement, le serveur intégré ne lit ni l'un ni l'autre : les deux valeurs passent en `-d` sur la ligne de commande, comme dans la section Backend.
+
+`post_max_size` doit rester au-dessus : il porte l'enveloppe entière, fichier et champs du formulaire. Dépassé, PHP vide `$_POST` **et** `$_FILES` sans rien signaler — l'administration annonçait alors « aucun fichier reçu » à quelqu'un qui venait d'en envoyer un. Ce cas est maintenant reconnu sur la longueur annoncée, seule chose qui survive à ce vidage.
 
 **Un administrateur ne passe pas par l'espace client.** Sa connexion le dépose sur le tableau de bord, l'icône de compte de la boutique y mène aussi, et `/espace-client` l'y renvoie. Ses commandes et ses favoris ne concernent pas son travail, et le déposer dans une page client avec un bouton « Administration » laisse croire que ce bouton s'affiche pour tout le monde. Une destination explicite garde la priorité : celui qu'on avait interrompu au paiement revient au paiement. Conséquence assumée : ses propres coordonnées et son mot de passe vivent désormais dans **Réglages → Mon compte**, sans quoi il n'aurait plus aucun moyen de les changer.
 
@@ -366,7 +372,6 @@ Chaque point ci-dessous porte un `TODO` à l'endroit exact dans le code.
 | Paiement en ligne | Refusé par le serveur, désactivé dans le tunnel. Aucun agrégateur n'est branché. Seul le paiement à la livraison fonctionne — et il fonctionne entièrement. |
 | Domaine vérifié dans Brevo | Aucun domaine n'est authentifié : Brevo ne peut pas signer pour `gmail.com`, et réécrit donc le Return-Path en `@…brevosend.com`. Ce compte a pourtant un historique d'ouvertures sur de nombreuses adresses Gmail, donc **ce n'est pas bloquant aujourd'hui**. Cela reste à faire avant la mise en ligne : la délivrabilité d'un domaine authentifié ne dépend pas de la réputation partagée d'un sous-domaine d'ESP. |
 | Clé d'API Brevo | Transmise en clair pendant le développement : à régénérer avant la mise en ligne. |
-| Visuels produits | 16 sneakers sur 20 et les 12 maillots n'ont pas de rendu. Les cartes basculent sur un halo dans la couleur du coloris. Le gérant les dépose depuis l'administration, sans intervention. |
 | Informations légales | Tout ce qui est entre crochets dans `data/legal.ts` : RCCM, IFU, hébergeur, numéro APDP. Ce sont des identifiants officiels, ils n'ont pas été inventés. |
 | Tarifs de livraison | 1 000 / 1 500 / 2 500 F CFA sont des valeurs de remplacement, en haut de `Checkout.tsx`. |
 | Coordonnées | Téléphone, e-mail et liens réseaux sont des valeurs de remplacement, en haut de `Footer.tsx` et `Contact.tsx`. |

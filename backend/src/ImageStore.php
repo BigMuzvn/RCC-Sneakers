@@ -161,14 +161,30 @@ class ImageStore
     private static function describeError(int $error): string
     {
         return match ($error) {
+            // « 8M » est une notation de configuration PHP, pas une unité qu'on
+            // écrit à quelqu'un. Le gérant lit des mégaoctets.
             UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => sprintf(
-                'Fichier trop lourd. Maximum %s.',
-                ini_get('upload_max_filesize')
+                'Image trop lourde. %s au maximum.',
+                self::readableLimit((string) ini_get('upload_max_filesize'))
             ),
             UPLOAD_ERR_PARTIAL => 'Le transfert a été interrompu. Réessayez.',
             UPLOAD_ERR_NO_FILE => 'Aucun fichier reçu.',
             UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => "Le serveur n'a pas pu écrire le fichier.",
             default => "Le téléversement a échoué.",
+        };
+    }
+
+    /** Traduit une directive PHP — « 8M », « 512K » — en poids lisible. */
+    private static function readableLimit(string $shorthand): string
+    {
+        $shorthand = trim($shorthand);
+        $valeur = (float) $shorthand;
+
+        return match (strtolower(substr($shorthand, -1))) {
+            'g' => rtrim(rtrim(number_format($valeur * 1024, 0, ',', ' '), '0'), ',') . ' Mo',
+            'm' => number_format($valeur, 0, ',', ' ') . ' Mo',
+            'k' => number_format($valeur, 0, ',', ' ') . ' Ko',
+            default => number_format($valeur / 1048576, 1, ',', ' ') . ' Mo',
         };
     }
 }

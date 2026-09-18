@@ -10,3 +10,26 @@
 
 # Le listing de répertoire ne doit jamais révéler ce qui est déposé ici.
 Options -Indexes
+
+# Téléversement des visuels produits.
+#
+# Valeurs identiques à .user.ini, juste à côté : ce fichier-ci sert les
+# hébergeurs restés en mod_php, l'autre ceux en CGI/FPM. Aucun des deux ne gêne
+# là où il est ignoré, et le dossier se déploie tel quel sans savoir lequel des
+# deux serveurs on aura en face.
+#
+# 2 Mo — le défaut de beaucoup d'installations — refusait des rendus de maillot
+# et refuserait toute photo prise au téléphone. Le poids reçu n'a pourtant
+# aucune incidence sur ce qui est conservé : tout finit en WebP à 1200 px.
+<IfModule mod_php.c>
+    php_value upload_max_filesize 8M
+    php_value post_max_size 12M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 8M
+    php_value post_max_size 12M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 8M
+    php_value post_max_size 12M
+</IfModule>

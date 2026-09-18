@@ -481,7 +481,8 @@ function ArticleForm({
                   </button>
                 )}
                 <p className="mt-2 text-[10px] leading-[1.5] text-white/30">
-                  PNG détouré de préférence. L'image est convertie et allégée automatiquement.
+                  PNG détouré de préférence, 8 Mo au maximum — une photo prise au téléphone passe sans retouche.
+                  L'image est convertie et allégée automatiquement.
                 </p>
               </div>
             </div>

@@ -125,9 +125,26 @@ class ImageStoreTest extends TestCase
 
     public function test_un_televersement_en_erreur_est_signale_clairement(): void
     {
-        $this->expectExceptionMessageMatches('/trop lourd/i');
+        $this->expectExceptionMessageMatches('/trop lourde/i');
 
         ImageStore::store(['tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE]);
+    }
+
+    /**
+     * Le plafond est annoncé en mégaoctets, pas en notation de configuration.
+     *
+     * Le message disait « Maximum 8M » : « 8M » est une directive PHP, pas une
+     * unité qu'on écrit à quelqu'un qui vient d'échouer à déposer une photo.
+     */
+    public function test_le_plafond_est_annonce_dans_une_unite_lisible(): void
+    {
+        try {
+            ImageStore::store(['tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE]);
+            $this->fail('un fichier trop lourd devait être refusé');
+        } catch (\RuntimeException $e) {
+            $this->assertMatchesRegularExpression('/\d+ (Mo|Ko)/', $e->getMessage());
+            $this->assertStringNotContainsString('M.', $e->getMessage());
+        }
     }
 
     /**
