@@ -391,6 +391,12 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 
 Le contenu de `frontend/dist/` va dans `public_html/`, celui de `backend/public/` dans `public_html/api/`. `src/`, `config.php` et `migrations/` restent **au-dessus** de la racine web, hors de portée du navigateur.
 
+**Sans accès SSH**, ce qui est le cas de la plupart des mutualisés, `migrations/run.php` et `bin/admin.php` ne peuvent pas être lancés : ils refusent de tourner ailleurs qu'en ligne de commande, et c'est voulu — une page « devenir administrateur », même bien cachée, finit toujours par être trouvée. `php bin/exporter.php` produit alors un fichier SQL à importer par phpMyAdmin, qui emporte d'un geste le schéma, le catalogue, les réglages, les commandes **et** le compte administrateur déjà promu.
+
+Ce fichier ne contient ni `CREATE DATABASE` ni `USE` — le nom de la base est imposé par l'hébergeur. Il laisse vides les tables de sessions, de jetons à usage unique et de limitation de débit : tout cela est attaché à une machine et à un instant, et poser des jetons valides sur un serveur public n'aurait aucun sens. Les visuels, eux, sont des fichiers : ils partent par FTP dans `api/uploads/`.
+
+Quatre réglages à revoir avant l'envoi : `app.env` sur `production`, `app.debug` sur `false`, `app.url` sur le vrai domaine — c'est lui qui fabrique les liens des e-mails, laissé sur `localhost` aucune réinitialisation de mot de passe n'aboutira — et `cors_origins` vidé, puisque le front et l'API partagent alors le domaine.
+
 Chacun des deux dossiers porte son `.htaccess`. Celui du front renvoie vers `index.html` tout ce qui n'est pas un fichier réel : le site est une application d'une seule page, le serveur ne connaît que `index.html`, et c'est le navigateur qui décide quoi afficher. Sans lui, `tondomaine.bj/boutique` renvoie le 404 d'Apache — ce qui arrive au premier lien partagé sur WhatsApp, au premier favori, et à chaque rechargement de page.
 
 Il fixe aussi les caches, et c'est moins anodin qu'il n'y paraît : les fichiers de `assets/` portent une empreinte dans leur nom et peuvent être gardés un an, mais `index.html` ne doit **jamais** l'être. C'est lui qui désigne la version des fichiers à charger ; mis en cache, il réclamerait ceux d'hier après chaque mise en ligne et le site resterait figé pour tous ceux qui l'ont déjà visité.
