@@ -239,6 +239,20 @@ Le semoir est **idempotent et ne touche jamais au stock d'une variante existante
 
 Les composants du front lisent encore leurs modules locaux pour l'affichage ; `GET /api/products` et `GET /api/jerseys` renvoient exactement la même forme, la bascule sera mécanique. En attendant, le stock affiché peut être en retard sur le stock réel — c'est cosmétique, le serveur reste seul juge à la commande.
 
+## La facture
+
+Un PDF, **écrit à la main**. FPDF ou TCPDF imposeraient un `vendor/` en production, et la facture est le seul document que la boutique produise : `Pdf.php` fournit ce qu'il faut — du texte, des traits, des aplats — en trois cents lignes.
+
+Deux choix méritent d'être dits. Les polices sont **standard et jamais embarquées** : Helvetica fait partie des quatorze fontes que tout lecteur possède, l'embarquer alourdirait chaque facture de plusieurs centaines de kilo-octets pour rien. Et l'encodage est **WinAnsi**, seul compris par ces fontes ; l'espace fine insécable que la typographie française met entre les milliers n'y existe pas et ressortirait en point d'interrogation au milieu d'un montant, elle est donc ramenée à une espace ordinaire.
+
+Les montants sont **alignés par la droite**, ce qui suppose de connaître la largeur du texte : les tables AFM d'Helvetica et d'Helvetica-Bold sont donc portées dans le fichier. Un caractère accentué y occupe exactement la largeur de sa lettre de base — « é » vaut « e » — ce qui permet de n'en garder que la partie ASCII.
+
+**La facture n'est pas stockée, elle est recomposée.** Les lignes d'une commande sont figées en base au moment de la validation ; rejouer le document dans trois ans donnera le même papier, même si la paire a changé de prix ou disparu du catalogue. Un tableau trop long passe à la page suivante — le panier accepte soixante lignes, sans report les dernières s'imprimeraient hors de la page, c'est-à-dire nulle part.
+
+`GET /api/orders/{reference}/facture`. Un client n'atteint que les siennes, et le filtre est **dans la requête** : une commande qui ne lui appartient pas n'est pas chargée du tout. Un administrateur les atteint toutes, parce qu'il répond au téléphone à des gens qui n'ont pas retrouvé la leur. Le bouton est un lien ordinaire et non un appel en JavaScript : le navigateur envoie le cookie de session comme pour n'importe quelle navigation et enregistre le fichier lui-même.
+
+**RCCM et IFU** sont deux réglages, vides par défaut, et ne s'impriment que renseignés. Ce sont des identifiants officiels : ils n'ont pas été inventés, et une facture sans RCCM vaut mieux qu'une facture avec un faux.
+
 ## Espace client
 
 Trois volets : **commandes**, **informations**, **favoris**.
@@ -327,7 +341,7 @@ Tout part de la maquette d'origine : [`docs/reference-maquette-hero.jpeg`](docs/
 4. **Agrégateur de paiement** — à choisir (KkiaPay, FedaPay, CinetPay sont les candidats béninois à comparer). Le reste du tunnel l'attend.
 5. ~~**Administration**~~ — faite. Huit écrans, 28 routes, journal des actions.
 6. ~~**Front sur l'API du catalogue**~~ — fait. Les modules `src/data/` sont supprimés, l'administration pilote réellement la boutique.
-7. **Facture PDF** — le bouton existe, inerte. Le format reste à définir.
+7. ~~**Facture PDF**~~ — faite. Générée à la demande, sans dépendance.
 8. **Contact et lettre d'information** — `POST /api/contact`, `POST /api/newsletter`.
 
 ### Ce qui n'est pas fonctionnel

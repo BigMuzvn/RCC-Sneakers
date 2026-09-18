@@ -341,17 +341,17 @@ function OrdersTab() {
               Livraison à : {order.delivery_address}
             </p>
 
-            {/* Le format de la facture n'est pas encore arrêté. Bouton inerte
-                et dit comme tel, plutôt qu'un téléchargement qui échoue. */}
-            <button
-              type="button"
-              disabled
-              title="La facture sera disponible prochainement"
-              className="mt-5 flex w-fit cursor-not-allowed items-center gap-2 border border-white/20 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/50"
+            {/* Un lien, pas un appel en JavaScript : le navigateur envoie le
+                cookie de session comme pour n'importe quelle navigation, et
+                enregistre le fichier lui-même. Rien à assembler en mémoire. */}
+            <a
+              href={`/api/orders/${order.reference}/facture`}
+              download={`facture-${order.reference.toLowerCase()}.pdf`}
+              className="mt-5 flex w-fit items-center gap-2 border border-white/20 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-white hover:text-white"
             >
               <Download className="h-3.5 w-3.5" strokeWidth={2.2} />
               Télécharger la facture
-            </button>
+            </a>
           </article>
         );
       })}

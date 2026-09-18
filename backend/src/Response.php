@@ -19,7 +19,29 @@ class Response
         public readonly int $status,
         public readonly array $payload,
         public array $cookies = [],
+        /** Corps brut — un PDF par exemple. Quand il est là, la charge JSON n'est pas envoyée. */
+        public readonly ?string $binary = null,
+        /** @var array<string,string> en-têtes supplémentaires */
+        public readonly array $headers = [],
     ) {
+    }
+
+    /**
+     * Fichier à télécharger.
+     *
+     * Le nom est réduit à ce qui ne peut pas s'échapper de l'en-tête : une
+     * référence de commande n'est faite que de lettres, de chiffres et de
+     * tirets, mais l'en-tête ne doit pas dépendre de cette confiance.
+     */
+    public static function download(string $contents, string $filename, string $type = 'application/pdf'): self
+    {
+        $safe = preg_replace('/[^A-Za-z0-9._-]/', '', $filename) ?: 'document';
+
+        return new self(200, [], [], $contents, [
+            'Content-Type' => $type,
+            'Content-Disposition' => 'attachment; filename="' . $safe . '"',
+            'Content-Length' => (string) strlen($contents),
+        ]);
     }
 
     public static function data(mixed $data, int $status = 200): self
@@ -81,11 +103,22 @@ class Response
     public function send(): void
     {
         http_response_code($this->status);
-        header('Content-Type: application/json; charset=utf-8');
 
         foreach ($this->cookies as $cookie) {
             header('Set-Cookie: ' . $cookie, false);
         }
+
+        if ($this->binary !== null) {
+            foreach ($this->headers as $name => $value) {
+                header("{$name}: {$value}");
+            }
+
+            echo $this->binary;
+
+            return;
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
 
         if ($this->status !== 204) {
             echo json_encode(

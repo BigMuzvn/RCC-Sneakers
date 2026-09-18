@@ -4,6 +4,7 @@ namespace Rcc\Controllers;
 
 use Rcc\Auth;
 use Rcc\Database;
+use Rcc\Invoice;
 use Rcc\Mailer\Emails;
 use Rcc\Mailer\Mailer;
 use Rcc\Request;
@@ -215,6 +216,38 @@ class OrdersController
         }
 
         return Response::data(['order' => $this->loadOrder((int) $row['id'])]);
+    }
+
+    /**
+     * La facture, en PDF.
+     *
+     * Un administrateur peut télécharger n'importe quelle facture — il en a
+     * besoin pour répondre au téléphone à quelqu'un qui n'a pas reçu la sienne.
+     * Un client ne voit que les siennes, et le filtre reste dans la requête :
+     * une commande qui ne lui appartient pas n'est pas chargée du tout.
+     */
+    public function invoice(Request $request, string $reference): Response
+    {
+        $customerId = $this->auth->id();
+
+        if ($customerId === null) {
+            return Response::unauthorized();
+        }
+
+        $row = $this->auth->admin() !== null
+            ? Database::first('SELECT id FROM orders WHERE reference = ?', [$reference])
+            : Database::first(
+                'SELECT id FROM orders WHERE reference = ? AND customer_id = ?',
+                [$reference, $customerId]
+            );
+
+        if ($row === null) {
+            return Response::error('not_found', "Cette commande n'existe pas.", [], 404);
+        }
+
+        $order = $this->loadOrder((int) $row['id']);
+
+        return Response::download(Invoice::render($order), Invoice::filename($order));
     }
 
     // -------------------------------------------------------------- privé

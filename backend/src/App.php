@@ -59,6 +59,7 @@ class App
         $router->add('POST', '/orders', fn (Request $r) => $orders->store($r));
         $router->add('GET', '/orders', fn (Request $r) => $orders->index($r));
         $router->add('GET', '/orders/{reference}', fn (Request $r, string $ref) => $orders->show($r, $ref));
+        $router->add('GET', '/orders/{reference}/facture', fn (Request $r, string $ref) => $orders->invoice($r, $ref));
 
         $public = new PublicController($this->mailer, $this->contacts);
         $router->add('GET', '/shop', fn (Request $r) => $public->shop($r));

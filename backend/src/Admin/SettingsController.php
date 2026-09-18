@@ -30,6 +30,11 @@ class SettingsController
         'shop_phone' => ['label' => 'Téléphone', 'type' => 'text', 'max' => 32],
         'shop_email' => ['label' => 'E-mail public', 'type' => 'email', 'max' => 191],
         'shop_hours' => ['label' => 'Horaires ou mention de retrait', 'type' => 'text', 'max' => 160],
+        // Mentions portées sur la facture. Vides tant que la boutique n'a pas
+        // communiqué ses numéros : une facture sans RCCM vaut mieux qu'une
+        // facture avec un RCCM inventé.
+        'shop_rccm' => ['label' => 'RCCM (facture)', 'type' => 'text', 'max' => 60],
+        'shop_ifu' => ['label' => 'IFU (facture)', 'type' => 'text', 'max' => 60],
         'social_instagram' => ['label' => 'Instagram', 'type' => 'url', 'max' => 191],
         'social_facebook' => ['label' => 'Facebook', 'type' => 'url', 'max' => 191],
         'social_whatsapp' => ['label' => 'WhatsApp', 'type' => 'url', 'max' => 191],

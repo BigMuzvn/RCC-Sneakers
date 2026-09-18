@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Phone, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Phone, Search, X } from 'lucide-react';
 import { ApiFailure, api } from '../../api/client';
 import { formatXof } from '../../utils/format';
 import {
@@ -272,9 +272,23 @@ function OrderPanel({
             <p className="font-display text-[15px] uppercase tracking-[0.05em] text-[#EDEFF2]">{order.reference}</p>
             <p className="mt-1 text-[10px] text-white/40">{formatDate(order.created_at, true)}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fermer" className="text-white/40 hover:text-white">
-            <X className="h-5 w-5" strokeWidth={2} />
-          </button>
+
+          <div className="flex shrink-0 items-center gap-3">
+            {/* Le gérant a besoin de la facture pour répondre au téléphone à
+                quelqu'un qui n'a pas retrouvé la sienne. */}
+            <a
+              href={`/api/orders/${order.reference}/facture`}
+              download={`facture-${order.reference.toLowerCase()}.pdf`}
+              title="Télécharger la facture"
+              className="flex items-center gap-1.5 border border-white/20 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/70 transition-colors hover:border-white hover:text-white"
+            >
+              <Download className="h-3 w-3" strokeWidth={2.2} />
+              Facture
+            </a>
+            <button type="button" onClick={onClose} aria-label="Fermer" className="text-white/40 hover:text-white">
+              <X className="h-5 w-5" strokeWidth={2} />
+            </button>
+          </div>
         </header>
 
         <div className="px-6 py-5">
