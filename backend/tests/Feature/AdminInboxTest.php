@@ -13,7 +13,7 @@ class AdminInboxTest extends ApiTestCase
 
         // Un message et deux inscrits, déposés par le public.
         $this->post('/contact', [
-            'name' => 'Lemaye Kpatinde',
+            'name' => 'Aurelie Dossou',
             'email' => 'client@exemple.com',
             'phone' => '0197000011',
             'subject' => 'Disponibilité taille 44',

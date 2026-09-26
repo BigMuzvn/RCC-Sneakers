@@ -16,8 +16,8 @@ class OrdersTest extends ApiTestCase
         parent::setUp();
 
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,
@@ -31,8 +31,8 @@ class OrdersTest extends ApiTestCase
     private function commande(array $override = []): array
     {
         return array_merge([
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'zone' => 'cotonou',
             'address' => 'Gbetagbo, lot 42, Abomey-Calavi',
@@ -331,7 +331,7 @@ class OrdersTest extends ApiTestCase
 
         $destinataires = array_column($this->mailer->sent, 'to');
 
-        $this->assertContains('lemaye@exemple.com', $destinataires, 'le client doit être confirmé');
+        $this->assertContains('aurelie@exemple.com', $destinataires, 'le client doit être confirmé');
         $this->assertContains('boutique@exemple.com', $destinataires, 'la boutique doit être prévenue');
 
         $pourBoutique = array_values(array_filter($this->mailer->sent, fn ($m) => $m['to'] === 'boutique@exemple.com'))[0];

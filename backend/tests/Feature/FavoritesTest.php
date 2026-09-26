@@ -12,8 +12,8 @@ class FavoritesTest extends ApiTestCase
         parent::setUp();
 
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,
@@ -121,7 +121,7 @@ class FavoritesTest extends ApiTestCase
     {
         $this->post('/favorites/toggle', ['item_type' => 'sneaker', 'item_id' => 3]);
 
-        Database::run('DELETE FROM customers WHERE email = ?', ['lemaye@exemple.com']);
+        Database::run('DELETE FROM customers WHERE email = ?', ['aurelie@exemple.com']);
 
         $this->assertSame(0, (int) Database::first('SELECT COUNT(*) c FROM favorites')['c']);
     }

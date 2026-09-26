@@ -11,8 +11,8 @@ class RegisterTest extends ApiTestCase
     private function valid(array $override = []): array
     {
         return array_merge([
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,
@@ -103,7 +103,7 @@ class RegisterTest extends ApiTestCase
         $response = $this->post('/auth/register', $this->valid());
 
         $this->assertSame(201, $response->status);
-        $this->assertSame('lemaye@exemple.com', $response->payload['data']['customer']['email']);
+        $this->assertSame('aurelie@exemple.com', $response->payload['data']['customer']['email']);
         $this->assertSame(1, (int) Database::first('SELECT COUNT(*) c FROM customers')['c']);
     }
 
@@ -114,7 +114,7 @@ class RegisterTest extends ApiTestCase
         $me = $this->get('/auth/me');
 
         $this->assertSame(200, $me->status);
-        $this->assertSame('lemaye@exemple.com', $me->payload['data']['customer']['email']);
+        $this->assertSame('aurelie@exemple.com', $me->payload['data']['customer']['email']);
     }
 
     public function test_le_mot_de_passe_nest_jamais_stocke_en_clair(): void
@@ -215,7 +215,7 @@ class RegisterTest extends ApiTestCase
         $this->post('/auth/register', $this->valid());
 
         $this->assertSame(1, $this->mailer->count());
-        $this->assertSame('lemaye@exemple.com', $this->mailer->last()['to']);
+        $this->assertSame('aurelie@exemple.com', $this->mailer->last()['to']);
         $this->assertNotNull($this->mailer->lastToken());
     }
 

@@ -12,7 +12,7 @@ class ContactTest extends ApiTestCase
     private function message(array $override = []): array
     {
         return array_merge([
-            'name' => 'Lemaye Kpatinde',
+            'name' => 'Aurelie Dossou',
             'email' => 'client@exemple.com',
             'phone' => '0197000000',
             'subject' => 'Disponibilité taille 44',
@@ -27,7 +27,7 @@ class ContactTest extends ApiTestCase
         $this->assertSame(201, $response->status);
 
         $row = Database::first('SELECT name, email, subject, status FROM contact_messages');
-        $this->assertSame('Lemaye Kpatinde', $row['name']);
+        $this->assertSame('Aurelie Dossou', $row['name']);
         $this->assertSame('Disponibilité taille 44', $row['subject']);
         $this->assertSame('new', $row['status']);
     }

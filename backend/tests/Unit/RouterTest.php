@@ -32,9 +32,9 @@ class RouterTest extends TestCase
         $router = new Router();
         $router->add('POST', '/echo', fn (Request $r) => Response::data($r->input('nom')));
 
-        $response = $router->dispatch(new Request('POST', '/echo', ['nom' => 'Lemaye']));
+        $response = $router->dispatch(new Request('POST', '/echo', ['nom' => 'Aurelie']));
 
-        $this->assertSame('Lemaye', $response->payload['data']);
+        $this->assertSame('Aurelie', $response->payload['data']);
     }
 
     public function test_une_route_inconnue_renvoie_404(): void

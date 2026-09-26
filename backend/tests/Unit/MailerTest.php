@@ -30,7 +30,7 @@ class MailerTest extends TestCase
     {
         $payload = (new BrevoMailer())->payload(
             'client@exemple.com',
-            'Lemaye',
+            'Aurelie',
             'Vérifiez votre adresse',
             '<p>Bonjour</p>'
         );
@@ -51,19 +51,19 @@ class MailerTest extends TestCase
     {
         $payload = (new BrevoMailer())->payload(
             'client@exemple.com',
-            'Lemaye',
+            'Aurelie',
             'Sujet',
-            '<p>Bonjour <strong>Lemaye</strong></p>'
+            '<p>Bonjour <strong>Aurelie</strong></p>'
         );
 
         $this->assertArrayHasKey('textContent', $payload);
-        $this->assertStringContainsString('Bonjour Lemaye', $payload['textContent']);
+        $this->assertStringContainsString('Bonjour Aurelie', $payload['textContent']);
         $this->assertStringNotContainsString('<strong>', $payload['textContent']);
     }
 
     public function test_le_lien_de_verification_figure_dans_le_message(): void
     {
-        $email = Emails::verification('Lemaye', 'http://localhost:5173/compte/verifier?token=abc123');
+        $email = Emails::verification('Aurelie', 'http://localhost:5173/compte/verifier?token=abc123');
 
         $this->assertStringContainsString('http://localhost:5173/compte/verifier?token=abc123', $email['html']);
         $this->assertNotSame('', $email['subject']);
@@ -71,7 +71,7 @@ class MailerTest extends TestCase
 
     public function test_le_lien_de_reinitialisation_figure_dans_le_message(): void
     {
-        $email = Emails::passwordReset('Lemaye', 'http://localhost:5173/compte/reinitialiser?token=xyz');
+        $email = Emails::passwordReset('Aurelie', 'http://localhost:5173/compte/reinitialiser?token=xyz');
 
         $this->assertStringContainsString('http://localhost:5173/compte/reinitialiser?token=xyz', $email['html']);
     }
@@ -90,8 +90,8 @@ class MailerTest extends TestCase
 
     public function test_les_messages_sont_en_francais(): void
     {
-        $verification = Emails::verification('Lemaye', 'http://exemple.test/x');
-        $reset = Emails::passwordReset('Lemaye', 'http://exemple.test/x');
+        $verification = Emails::verification('Aurelie', 'http://exemple.test/x');
+        $reset = Emails::passwordReset('Aurelie', 'http://exemple.test/x');
 
         $this->assertMatchesRegularExpression('/vérifi|confirm/i', $verification['subject']);
         $this->assertMatchesRegularExpression('/mot de passe/i', $reset['subject']);
@@ -116,7 +116,7 @@ class MailerTest extends TestCase
             ],
         ]);
 
-        $result = (new BrevoMailer())->send('client@exemple.com', 'Lemaye', 'Sujet', '<p>x</p>');
+        $result = (new BrevoMailer())->send('client@exemple.com', 'Aurelie', 'Sujet', '<p>x</p>');
 
         $this->assertFalse($result);
     }

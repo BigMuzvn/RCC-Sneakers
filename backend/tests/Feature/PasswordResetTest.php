@@ -12,8 +12,8 @@ class PasswordResetTest extends ApiTestCase
         parent::setUp();
 
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'ancien-mot-de-passe',
             'terms' => true,
@@ -25,17 +25,17 @@ class PasswordResetTest extends ApiTestCase
 
     private function askReset(): string
     {
-        $this->post('/auth/forgot-password', ['email' => 'lemaye@exemple.com']);
+        $this->post('/auth/forgot-password', ['email' => 'aurelie@exemple.com']);
 
         return $this->mailer->lastToken();
     }
 
     public function test_une_adresse_connue_recoit_un_lien(): void
     {
-        $this->post('/auth/forgot-password', ['email' => 'lemaye@exemple.com']);
+        $this->post('/auth/forgot-password', ['email' => 'aurelie@exemple.com']);
 
         $this->assertSame(1, $this->mailer->count());
-        $this->assertSame('lemaye@exemple.com', $this->mailer->last()['to']);
+        $this->assertSame('aurelie@exemple.com', $this->mailer->last()['to']);
     }
 
     /**
@@ -45,7 +45,7 @@ class PasswordResetTest extends ApiTestCase
      */
     public function test_une_adresse_inconnue_repond_exactement_pareil(): void
     {
-        $connue = $this->post('/auth/forgot-password', ['email' => 'lemaye@exemple.com']);
+        $connue = $this->post('/auth/forgot-password', ['email' => 'aurelie@exemple.com']);
         $inconnue = $this->post('/auth/forgot-password', ['email' => 'personne@exemple.com']);
 
         $this->assertSame($connue->status, $inconnue->status);
@@ -65,7 +65,7 @@ class PasswordResetTest extends ApiTestCase
         $this->assertSame(200, $response->status);
 
         $this->assertSame(200, $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'nouveau-mot-de-passe',
         ])->status);
     }
@@ -77,7 +77,7 @@ class PasswordResetTest extends ApiTestCase
         $this->forgetCookies();
 
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'ancien-mot-de-passe',
         ]);
 
@@ -90,7 +90,7 @@ class PasswordResetTest extends ApiTestCase
      */
     public function test_la_reinitialisation_coupe_toutes_les_sessions_ouvertes(): void
     {
-        $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'ancien-mot-de-passe']);
+        $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'ancien-mot-de-passe']);
         $sessionOuverte = $this->cookies;
         $this->assertSame(200, $this->get('/auth/me')->status);
 
@@ -170,7 +170,7 @@ class PasswordResetTest extends ApiTestCase
         $token = $this->askReset();
         $this->post('/auth/reset-password', ['token' => $token, 'password' => 'nouveau-mot-de-passe']);
 
-        $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'nouveau-mot-de-passe']);
+        $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'nouveau-mot-de-passe']);
 
         $this->assertTrue($this->get('/auth/me')->payload['data']['customer']['email_verified']);
     }
@@ -183,10 +183,10 @@ class PasswordResetTest extends ApiTestCase
     public function test_les_demandes_repetees_sont_plafonnees(): void
     {
         for ($i = 0; $i < 3; $i++) {
-            $this->post('/auth/forgot-password', ['email' => 'lemaye@exemple.com']);
+            $this->post('/auth/forgot-password', ['email' => 'aurelie@exemple.com']);
         }
 
-        $response = $this->post('/auth/forgot-password', ['email' => 'lemaye@exemple.com']);
+        $response = $this->post('/auth/forgot-password', ['email' => 'aurelie@exemple.com']);
 
         $this->assertSame(429, $response->status);
         $this->assertSame(3, $this->mailer->count());

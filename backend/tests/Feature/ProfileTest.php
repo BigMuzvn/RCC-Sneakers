@@ -12,8 +12,8 @@ class ProfileTest extends ApiTestCase
         parent::setUp();
 
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,
@@ -34,13 +34,13 @@ class ProfileTest extends ApiTestCase
     public function test_on_peut_changer_son_nom_et_son_telephone(): void
     {
         $response = $this->post('/auth/profile', [
-            'name' => 'Lemaye K.',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie K.',
+            'email' => 'aurelie@exemple.com',
             'phone' => '+229 01 97 55 44 33',
         ]);
 
         $this->assertSame(200, $response->status);
-        $this->assertSame('Lemaye K.', $response->payload['data']['customer']['name']);
+        $this->assertSame('Aurelie K.', $response->payload['data']['customer']['name']);
         $this->assertSame('2290197554433', Database::first('SELECT phone FROM customers')['phone']);
     }
 
@@ -63,8 +63,8 @@ class ProfileTest extends ApiTestCase
     public function test_garder_son_propre_numero_nest_pas_un_doublon(): void
     {
         $response = $this->post('/auth/profile', [
-            'name' => 'Lemaye K.',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie K.',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
         ]);
 
@@ -82,7 +82,7 @@ class ProfileTest extends ApiTestCase
         Database::run('UPDATE customers SET email_verified_at = ?', [Database::now()]);
 
         $response = $this->post('/auth/profile', [
-            'name' => 'Lemaye Kpatinde',
+            'name' => 'Aurelie Dossou',
             'email' => 'nouvelle@exemple.com',
             'phone' => '0197000000',
         ]);
@@ -98,8 +98,8 @@ class ProfileTest extends ApiTestCase
         Database::run('UPDATE customers SET email_verified_at = ?', [Database::now()]);
 
         $response = $this->post('/auth/profile', [
-            'name' => 'Lemaye K.',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie K.',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
         ]);
 
@@ -132,7 +132,7 @@ class ProfileTest extends ApiTestCase
 
         $this->forgetCookies();
         $this->assertSame(200, $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'nouveau-mot-de-passe',
         ])->status);
     }
@@ -148,7 +148,7 @@ class ProfileTest extends ApiTestCase
 
         // Un second appareil se connecte.
         $this->forgetCookies();
-        $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'motdepasse']);
+        $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'motdepasse']);
         $autreAppareil = $this->cookies;
 
         $this->cookies = $sienne;

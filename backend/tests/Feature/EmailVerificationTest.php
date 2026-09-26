@@ -10,8 +10,8 @@ class EmailVerificationTest extends ApiTestCase
     private function register(): string
     {
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,

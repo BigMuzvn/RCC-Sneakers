@@ -27,7 +27,7 @@ class InvoiceTest extends ApiTestCase
         $zone = Database::first('SELECT id FROM delivery_zones WHERE is_active = 1 ORDER BY position, id');
 
         $response = $this->post('/orders', [
-            'name' => 'Lemaye Godson',
+            'name' => 'Aurelie Dossou',
             'email' => 'client@exemple.bj',
             'phone' => '0197000011',
             'address' => 'Carré 1234, Gbédjromèdé, Cotonou',
@@ -80,7 +80,7 @@ class InvoiceTest extends ApiTestCase
 
         $this->assertStringContainsString($reference, $response->binary);
         $this->assertStringContainsString('FACTURE', $response->binary);
-        $this->assertStringContainsString('Lemaye Godson', $response->binary);
+        $this->assertStringContainsString('Aurelie Dossou', $response->binary);
     }
 
     /**

@@ -12,8 +12,8 @@ class LoginTest extends ApiTestCase
         parent::setUp();
 
         $this->post('/auth/register', [
-            'name' => 'Lemaye Kpatinde',
-            'email' => 'lemaye@exemple.com',
+            'name' => 'Aurelie Dossou',
+            'email' => 'aurelie@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
             'terms' => true,
@@ -26,18 +26,18 @@ class LoginTest extends ApiTestCase
     public function test_connexion_par_adresse_email(): void
     {
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'motdepasse',
         ]);
 
         $this->assertSame(200, $response->status);
-        $this->assertSame('lemaye@exemple.com', $response->payload['data']['customer']['email']);
+        $this->assertSame('aurelie@exemple.com', $response->payload['data']['customer']['email']);
     }
 
     public function test_la_casse_de_ladresse_est_sans_importance(): void
     {
         $response = $this->post('/auth/login', [
-            'identifier' => 'Lemaye@Exemple.COM',
+            'identifier' => 'Aurelie@Exemple.COM',
             'password' => 'motdepasse',
         ]);
 
@@ -66,7 +66,7 @@ class LoginTest extends ApiTestCase
     public function test_un_mauvais_mot_de_passe_est_refuse(): void
     {
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'pas-le-bon',
         ]);
 
@@ -89,7 +89,7 @@ class LoginTest extends ApiTestCase
         $this->forgetCookies();
 
         $mauvais = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'pas-le-bon',
         ]);
 
@@ -101,13 +101,13 @@ class LoginTest extends ApiTestCase
     {
         for ($i = 0; $i < 5; $i++) {
             $this->post('/auth/login', [
-                'identifier' => 'lemaye@exemple.com',
+                'identifier' => 'aurelie@exemple.com',
                 'password' => 'faux',
             ]);
         }
 
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'motdepasse',   // le bon, mais trop tard
         ]);
 
@@ -119,19 +119,19 @@ class LoginTest extends ApiTestCase
     {
         for ($i = 0; $i < 4; $i++) {
             $this->post('/auth/login', [
-                'identifier' => 'lemaye@exemple.com',
+                'identifier' => 'aurelie@exemple.com',
                 'password' => 'faux',
             ]);
         }
 
-        $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'motdepasse']);
+        $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'motdepasse']);
 
         for ($i = 0; $i < 4; $i++) {
-            $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'faux']);
+            $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'faux']);
         }
 
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'motdepasse',
         ]);
 
@@ -141,7 +141,7 @@ class LoginTest extends ApiTestCase
     public function test_se_souvenir_de_moi_pose_un_cookie_persistant(): void
     {
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'motdepasse',
             'remember' => true,
         ]);
@@ -156,7 +156,7 @@ class LoginTest extends ApiTestCase
     public function test_une_adresse_non_verifiee_nempeche_pas_de_se_connecter(): void
     {
         $response = $this->post('/auth/login', [
-            'identifier' => 'lemaye@exemple.com',
+            'identifier' => 'aurelie@exemple.com',
             'password' => 'motdepasse',
         ]);
 
@@ -166,7 +166,7 @@ class LoginTest extends ApiTestCase
 
     public function test_la_deconnexion_ferme_la_session(): void
     {
-        $this->post('/auth/login', ['identifier' => 'lemaye@exemple.com', 'password' => 'motdepasse']);
+        $this->post('/auth/login', ['identifier' => 'aurelie@exemple.com', 'password' => 'motdepasse']);
         $this->assertSame(200, $this->get('/auth/me')->status);
 
         $avant = (int) Database::first('SELECT COUNT(*) c FROM auth_tokens')['c'];

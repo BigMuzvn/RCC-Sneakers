@@ -10,7 +10,7 @@ class ValidatorTest extends TestCase
     public function test_une_saisie_complete_ne_produit_aucune_erreur(): void
     {
         $v = new Validator([
-            'name' => 'Lemaye Kpatinde',
+            'name' => 'Aurelie Dossou',
             'email' => 'client@exemple.com',
             'phone' => '0197000000',
             'password' => 'motdepasse',
@@ -38,9 +38,9 @@ class ValidatorTest extends TestCase
 
     public function test_les_espaces_autour_du_texte_sont_retires(): void
     {
-        $v = new Validator(['name' => '  Lemaye  ']);
+        $v = new Validator(['name' => '  Aurelie  ']);
 
-        $this->assertSame('Lemaye', $v->text('name', 2, 120));
+        $this->assertSame('Aurelie', $v->text('name', 2, 120));
     }
 
     /**
