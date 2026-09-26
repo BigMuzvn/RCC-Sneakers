@@ -30,14 +30,6 @@ export default function PageLegale({ slug }: { slug: string }) {
         {/* same title lockup as the other inner pages */}
         <header className="relative mt-14 select-none sm:mt-20">
           <div className="relative w-fit">
-            <span
-              aria-hidden="true"
-              /* smaller negative offset than the other pages: this h1 is smaller, so its cap top
-                 sits closer to its box top — the label must ride higher to keep the same visual gap */
-              className="absolute bottom-full left-0 mb-[-0.21em] font-display uppercase leading-none tracking-[0.3em] text-white/25 text-[clamp(11px,2.6vw,34px)]"
-            >
-              RCC
-            </span>
             <h1 className="font-display uppercase leading-[0.95] tracking-[-0.02em] text-white/[0.16] text-[clamp(30px,7vw,92px)]">
               {page.title}
             </h1>

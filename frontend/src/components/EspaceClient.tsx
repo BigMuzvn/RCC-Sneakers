@@ -76,12 +76,6 @@ export default function EspaceClient() {
         {/* ---------- TITRE ---------- */}
         <header className="relative mt-14 select-none sm:mt-20">
           <div className="relative w-fit">
-            <span
-              aria-hidden="true"
-              className="absolute bottom-full left-0 mb-[-0.45em] font-display uppercase leading-none tracking-[0.3em] text-white/25 text-[clamp(11px,2.6vw,34px)]"
-            >
-              RCC
-            </span>
             <h1 className="whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.16] text-[clamp(30px,8.4vw,110px)]">
               Espace client
             </h1>

@@ -25,7 +25,7 @@ export default function JerseyDetail() {
     );
   }
 
-  if (!jersey) return <Navigate to="/maillots" replace />;
+  if (!jersey) return <Navigate to="/tenues" replace />;
 
   return <JerseyView key={jersey.id} jersey={jersey} />;
 }
@@ -45,7 +45,7 @@ function JerseyView({ jersey }: { jersey: Jersey }) {
     add({
       type: 'jersey',
       id: jersey.id,
-      href: `/maillots/${jersey.slug}`,
+      href: `/tenues/${jersey.slug}`,
       title: `${jersey.club} — ${jersey.kit}`,
       subtitle: `${jersey.season} · ${jersey.colorway}`,
       size,
@@ -92,7 +92,7 @@ function JerseyView({ jersey }: { jersey: Jersey }) {
             Accueil
           </Link>
           <ChevronRight className="h-3 w-3" strokeWidth={2} />
-          <Link to="/maillots" className="transition-colors hover:text-white">
+          <Link to="/tenues" className="transition-colors hover:text-white">
             Maillots
           </Link>
           <ChevronRight className="h-3 w-3" strokeWidth={2} />
@@ -109,16 +109,6 @@ function JerseyView({ jersey }: { jersey: Jersey }) {
                 background: `radial-gradient(ellipse 78% 68% at 50% 56%, ${jersey.accent}8C 0%, ${jersey.accent}45 38%, ${jersey.accent}1A 60%, transparent 78%)`,
               }}
             />
-            {/* Le nom du club en filigrane remplace le visuel manquant : aucun
-                maillot n'a encore de rendu, et une zone vide se lirait comme une
-                image cassée plutôt que comme un parti pris. */}
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-[46%] max-w-full -translate-x-1/2 -translate-y-1/2 select-none px-8 text-center font-display uppercase leading-[0.95] tracking-[-0.02em] text-white/[0.09] text-[clamp(24px,5.6vw,78px)]"
-            >
-              {jersey.club}
-            </span>
-
             {jersey.image ? (
               <img
                 src={jersey.image}

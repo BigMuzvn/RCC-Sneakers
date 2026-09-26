@@ -60,7 +60,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
       })),
       ...jerseys.map((j) => ({
         cle: `jersey-${j.id}`,
-        to: `/maillots/${j.slug}`,
+        to: `/tenues/${j.slug}`,
         titre: j.club,
         detail: `${j.kit} · ${j.season}`,
         prix: j.price_xof,

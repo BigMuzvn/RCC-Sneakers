@@ -121,7 +121,6 @@ export default function Footer() {
           <div className="col-span-2 lg:col-span-1">
             <Link to="/" className="flex w-fit flex-col items-center" aria-label="RCC Sneakers — accueil">
               <img src={rccLogo} alt="" className="h-9 w-9 object-contain" />
-              <span className="mt-1 font-display text-[10px] tracking-[0.18em] text-white">RCC</span>
             </Link>
             <p className="mt-4 max-w-xs text-[11px] leading-[1.75] text-white/50">
               Sneakers authentiques, sélectionnées à la main et livrées à Cotonou sous 24 h. Chaque paire est
@@ -151,7 +150,7 @@ export default function Footer() {
               {[
                 { label: 'Accueil', to: '/' },
                 { label: 'Boutique', to: '/boutique' },
-                { label: 'Maillots', to: '/maillots' },
+                { label: 'Maillots', to: '/tenues' },
                 { label: 'Soldes', to: '/soldes' },
                 { label: 'Contact', to: '/contact' },
               ].map((link) => (
@@ -241,11 +240,13 @@ export default function Footer() {
         aria-hidden="true"
         className="pointer-events-none relative z-0 -mb-[0.24em] mt-2 select-none px-4 sm:px-8 lg:px-14"
       >
-        <span className="block font-display uppercase leading-none tracking-[0.3em] text-white/[0.06] text-[clamp(10px,2.2vw,28px)]">
-          RCC
-        </span>
-        <span className="block whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.05] text-[clamp(40px,13vw,170px)]">
-          Sneakers
+        {/* Même signature que l'accueil, d'un seul tenant et tendue aux bords.
+            Le calibre est calé sur la largeur **utile** — celle du conteneur
+            moins ses marges — et non sur celle de l'écran : ce bloc est aligné
+            à gauche dans un conteneur qui a les siennes. 10,5vw remplit 98 %
+            de cette largeur, mesuré de 360 à 1920 px. */}
+        <span className="block whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.05] text-[clamp(26px,10.5vw,208px)]">
+          RCC Sneakers
         </span>
       </div>
     </footer>

@@ -33,10 +33,7 @@ export default function AuthShell({
         <Navbar />
 
         <div className="mx-auto mt-14 w-full max-w-md pb-20 sm:mt-24 lg:mx-0">
-          <span className="block font-display text-[11px] uppercase leading-none tracking-[0.3em] text-white/25 sm:text-[13px]">
-            RCC
-          </span>
-          <h1 className="mt-2 font-display uppercase leading-none tracking-[-0.01em] text-[#EDEFF2] text-[clamp(26px,4.4vw,42px)]">
+          <h1 className="font-display uppercase leading-none tracking-[-0.01em] text-[#EDEFF2] text-[clamp(26px,4.4vw,42px)]">
             {title}
           </h1>
           {lead && <p className="mt-3 text-[11px] leading-[1.7] text-white/55 sm:text-xs">{lead}</p>}

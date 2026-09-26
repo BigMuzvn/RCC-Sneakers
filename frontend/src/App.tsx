@@ -45,8 +45,8 @@ function App() {
                 <Route path="/" element={<Hero />} />
                 <Route path="/boutique" element={<Boutique />} />
                 <Route path="/boutique/:slug" element={<ProductDetail />} />
-                <Route path="/maillots" element={<Maillots />} />
-                <Route path="/maillots/:slug" element={<JerseyDetail />} />
+                <Route path="/tenues" element={<Maillots />} />
+                <Route path="/tenues/:slug" element={<JerseyDetail />} />
                 <Route path="/soldes" element={<Soldes />} />
                 <Route path="/contact" element={<Contact />} />
 
@@ -64,7 +64,7 @@ function App() {
                   <Route index element={<AdminOverview />} />
                   <Route path="commandes" element={<AdminOrders />} />
                   <Route path="produits" element={<AdminCatalogue kind="product" />} />
-                  <Route path="maillots" element={<AdminCatalogue kind="jersey" />} />
+                  <Route path="tenues" element={<AdminCatalogue kind="jersey" />} />
                   <Route path="clients" element={<AdminCustomers />} />
                   <Route path="messages" element={<AdminInbox />} />
                   <Route path="vitrine" element={<AdminSettings view="vitrine" />} />

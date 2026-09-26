@@ -86,7 +86,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return [
           {
             ...line,
-            href: `/maillots/${jersey.slug}`,
+            href: `/tenues/${jersey.slug}`,
             title: jersey.club,
             subtitle: `${jersey.kit} · ${jersey.season}`,
             unit_price_xof: jersey.price_xof,

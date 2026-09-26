@@ -104,13 +104,6 @@ function ProductView({ product }: { product: Product }) {
                 background: `radial-gradient(ellipse 78% 68% at 50% 56%, ${product.accent}8C 0%, ${product.accent}45 38%, ${product.accent}1A 60%, transparent 78%)`,
               }}
             />
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.09] text-[clamp(36px,9vw,120px)]"
-            >
-              {product.brand}
-            </span>
-
             {product.image ? (
               <img
                 src={product.image}

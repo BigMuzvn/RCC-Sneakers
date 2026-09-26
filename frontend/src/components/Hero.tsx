@@ -175,14 +175,18 @@ function Vitrine({ slides }: { slides: Product[] }) {
       <div className="relative mt-4 min-h-0 flex-1 sm:mt-6">
         <div className="pointer-events-none absolute left-1/2 top-[48%] z-0 -translate-x-1/2 -translate-y-1/2 select-none">
           <div className="relative">
-            <span
-              aria-hidden="true"
-              className="absolute bottom-full left-0 mb-[-0.45em] font-display uppercase leading-none tracking-[0.3em] text-white/25 text-[clamp(14px,3.6vw,50px)]"
-            >
-              RCC
-            </span>
-            <h1 className="whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.085] text-[clamp(54px,15.5vw,205px)]">
-              Sneakers
+            {/* Le nom entier en filigrane, d'un seul tenant, tendu vers les
+                bords : 11,3vw occupe 96 % de la largeur de l'écran, mesuré de
+                360 à 1920 px. La ligne ne se coupe jamais (whitespace-nowrap),
+                c'est donc la largeur qui commande, pas la hauteur.
+
+                La borne basse est volontairement sous le calibre fluide : une
+                valeur minimale plus haute que 11,3vw reprendrait la main sur
+                les écrans étroits et ferait déborder la page, exactement là où
+                on ne peut pas se le permettre. À 320 px, 11,3vw vaut 36 px —
+                32 px reste donc en dessous et ne s'applique jamais en vrai. */}
+            <h1 className="whitespace-nowrap font-display uppercase leading-none tracking-[-0.02em] text-white/[0.085] text-[clamp(32px,11.3vw,240px)]">
+              RCC Sneakers
             </h1>
           </div>
         </div>

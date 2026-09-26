@@ -18,7 +18,7 @@ export const ADMIN_LINKS = [
   { to: '/admin', end: true, label: "Vue d'ensemble", icon: LayoutDashboard },
   { to: '/admin/commandes', label: 'Commandes', icon: Package, badge: 'orders' },
   { to: '/admin/produits', label: 'Sneakers', icon: Boxes },
-  { to: '/admin/maillots', label: 'Maillots', icon: Shirt },
+  { to: '/admin/tenues', label: 'Maillots', icon: Shirt },
   { to: '/admin/clients', label: 'Clients', icon: Users },
   { to: '/admin/messages', label: 'Messagerie', icon: Mail, badge: 'messages' },
   { to: '/admin/vitrine', label: 'Vitrine', icon: Store },

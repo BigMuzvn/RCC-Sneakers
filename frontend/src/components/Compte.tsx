@@ -233,11 +233,8 @@ export default function Compte() {
 
           {/* ---------- FORM ---------- */}
           <div className="order-1 w-full max-w-md justify-self-center lg:order-2 lg:justify-self-start">
-            <span className="block font-display text-[11px] uppercase leading-none tracking-[0.3em] text-white/25 sm:text-[13px]">
-              RCC
-            </span>
             {/* readable rather than a watermark: this heading has to be legible on a form */}
-            <h1 className="mt-2 font-display uppercase leading-none tracking-[-0.01em] text-[#EDEFF2] text-[clamp(30px,5vw,48px)]">
+            <h1 className="font-display uppercase leading-none tracking-[-0.01em] text-[#EDEFF2] text-[clamp(30px,5vw,48px)]">
               {current.title}
             </h1>
             <p key={`${mode}-lead`} className="mt-3 animate-slide-in text-[11px] leading-[1.7] text-white/55 motion-reduce:animate-none sm:text-xs">

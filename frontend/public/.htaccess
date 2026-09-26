@@ -63,6 +63,21 @@
 <IfModule mod_headers.c>
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
 
+    # Le navigateur annonce, dans chaque requête, l'adresse de la page qui l'a
+    # déclenchée. Ici on n'en laisse que le domaine.
+    #
+    # Ce n'est pas un raffinement : sur l'hébergement de démonstration, un
+    # filtre anti-hameçonnage rejette par une erreur 500 toute requête dont
+    # cette adresse contient « mail ». La page des maillots, à l'adresse
+    # `/maillots`, perdait ainsi ses douze visuels et sa bannière — mesuré
+    # 0/12, cinq fois de suite, sans une seule erreur dans le code. La route
+    # s'appelle `/tenues` depuis, et cette ligne ferme le sujet pour de bon :
+    # aucun filtre de ce genre ne peut plus couper une page à cause de son nom.
+    #
+    # Le doublon avec le `meta` de `index.html` est voulu : le `meta` voyage
+    # avec le site, l'en-tête tient si le `meta` est un jour retiré.
+    Header always set Referrer-Policy "strict-origin"
+
     <FilesMatch "\.(css|js|webp|png|svg|woff2?)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>

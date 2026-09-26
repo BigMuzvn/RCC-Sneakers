@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#08090B" />
+
+    <!--
+      Le navigateur annonce, dans chaque requête, l'adresse de la page qui la
+      déclenche. Sur l'hébergement de démonstration, un filtre anti-hameçonnage
+      rejette toute requête dont cette adresse contient « mail » — la page
+      `/maillots` perdait ainsi ses douze visuels, sa bannière et tout ce
+      qu'elle aurait chargé ensuite, avec une erreur 500 impossible à voir dans
+      le code. La route s'appelle donc `/tenues`, et cette ligne-ci coupe le
+      chemin de l'adresse annoncée : il ne reste que le domaine. Aucun filtre de
+      ce type ne peut plus couper une page à cause de son nom.
+    -->
+    <meta name="referrer" content="strict-origin" />
     <meta
       name="description"
       content="Sneakers et maillots authentiques à Cotonou. Sélection à la main, livraison sous 24 h au Bénin."

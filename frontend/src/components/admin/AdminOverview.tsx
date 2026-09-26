@@ -110,7 +110,7 @@ export default function AdminOverview() {
 
           <ul className="mt-4 flex flex-col gap-3 text-[11px]">
             <Line label="Sneakers en vente" value={data.catalogue.products} to="/admin/produits" />
-            <Line label="Maillots en vente" value={data.catalogue.jerseys} to="/admin/maillots" />
+            <Line label="Maillots en vente" value={data.catalogue.jerseys} to="/admin/tenues" />
           </ul>
 
           {data.catalogue.without_image > 0 && (

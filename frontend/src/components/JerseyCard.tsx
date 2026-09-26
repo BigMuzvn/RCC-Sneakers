@@ -17,7 +17,7 @@ export default function JerseyCard({ jersey }: { jersey: Jersey }) {
       {/* Lien étiré et non englobant : un <button> dans un <a> est du HTML
           invalide, et la carte porte un bouton d'ajout rapide et un cœur. */}
       <Link
-        to={`/maillots/${jersey.slug}`}
+        to={`/tenues/${jersey.slug}`}
         className="absolute inset-0 z-10"
         aria-label={`Maillot ${jersey.club} ${jersey.kit} ${jersey.season}`}
       />

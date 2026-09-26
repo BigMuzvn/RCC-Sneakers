@@ -9,7 +9,7 @@ import { useAuth } from '../context/auth-context';
 const NAV_LINKS = [
   { label: 'Accueil', to: '/' },
   { label: 'Boutique', to: '/boutique' },
-  { label: 'Maillots', to: '/maillots' },
+  { label: 'Maillots', to: '/tenues' },
   { label: 'Soldes', to: '/soldes' },
   { label: 'Contacts', to: '/contact' },
 ];
@@ -25,7 +25,6 @@ export default function Navbar() {
       <header className="relative z-20 flex shrink-0 items-center justify-between gap-4">
         <Link to="/" className="flex flex-col items-center" aria-label="RCC Sneakers — accueil">
           <img src={rccLogo} alt="" className="h-8 w-8 object-contain sm:h-9 sm:w-9" />
-          <span className="mt-1 font-display text-[9px] tracking-[0.18em] text-white sm:text-[10px]">RCC</span>
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex xl:gap-10">
@@ -108,7 +107,6 @@ export default function Navbar() {
         <div className="flex shrink-0 items-center justify-between">
           <div className="flex flex-col items-center">
             <img src={rccLogo} alt="" className="h-8 w-8 object-contain" />
-            <span className="mt-1 font-display text-[9px] tracking-[0.18em] text-white">RCC</span>
           </div>
           <button
             type="button"
